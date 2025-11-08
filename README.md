@@ -1,40 +1,40 @@
 # Team4
 ```mermaid
 flowchart TD
-    A[BuildLink 網站功能架構]
+    A[BuildLink]
 
-    %% --- HSU 的工作 ---
-    A --> C("共同驗證 (Auth)<br><b>Shing.Rong.LEE</b>")
+    %% --- HSU's Work ---
+    A --> C("Auth<br><b>Shing.Rong.LEE</b>")
     C --> C1("Register/Login (Contractor)")
     C --> C2("Register/Login (Supplier)")
     
-    A --> F("數據儀表板<br><b>Shing.Rong.LEE</b>")
+    A --> F("Data Dashboard<br><b>Shing.Rong.LEE</b>")
     F --> F1(Monitor Multi-Project Dashboard)
     F --> F2(View Analytics Reports)
 
-    %% --- LEE 的工作 ---
-    A --> B("Contractor (承包商) 功能<br><b>Wan.Zhen.HSU</b>")
-    B --> D("採購管理")
+    %% --- LEE's Work' ---
+    A --> B("Contractor Function<br><b>Wan.Zhen.HSU</b>")
+    B --> D("Procurement Management")
     D --> D1(Manage Supplier)
     D --> D2(Create Purchase Order)
     
-    B --> E("交付追蹤")
+    B --> E("Delivery tracking")
     E --> E1(Track Delivery)
 
-    B --> F_Sub("帳務管理")
+    B --> F_Sub("Accounting Management")
     F_Sub --> F_Sub1(Manage Invoices)
 
 
-    %% --- Zafran 的工作 ---
-    A --> G("Supplier (供應商) 功能<br><b>Zhafran</b>")
-    G --> I("供應鏈管理")
+    %% --- Zafran's Work ---
+    A --> G("Supplier Function<br><b>Zhafran</b>")
+    G --> I("Supply Chain Management")
     I --> I1(Update Material)
     I --> I2(Confirm Purchase Order)
     
-    G --> J("交付管理")
+    G --> J("Delivery Management")
     J --> J1(Provide Delivery)
     
-    G --> K("帳務管理")
+    G --> K("Accounting Management")
     K --> K1(Send Invoices)
 
 
