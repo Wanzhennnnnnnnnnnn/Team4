@@ -1,6 +1,7 @@
 # Team4
 ```mermaid
-
+    flowchart TD
+    
     %% --- LEE 的工作 ---
     A --> C("共同驗證 (Auth)<br><b>Shing.Rong.LEE</b>")
     C --> C1("Register/Login (Contractor)")
