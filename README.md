@@ -41,9 +41,9 @@ flowchart TD
     %% --- 顏色定義 (實作優先權) ---
     
     %% MVP (高優先) - 綠色
-    classDef highPriority fill:#d9f9d9,stroke:#333,stroke-width:2px;
+    classDef highPriority fill:#81C59E,stroke:#333,stroke-width:2px;
     %% Full-Featured (低優先) - 藍色
-    classDef lowPriority fill:#d9d9f9,stroke:#333,stroke-width:2px;
+    classDef lowPriority fill:#ACD6FF,stroke:#333,stroke-width:2px;
 
     %% --- 應用顏色 ---
     class C,C1,C2,D,D1,D2,E,E1,I,I1,I2,J,J1 highPriority
