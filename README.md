@@ -3,7 +3,7 @@
 flowchart TD
     A[BuildLink 網站功能架構]
 
-    %% --- HSU 的工作 ---
+    %% --- LEE 的工作 ---
     A --> C("共同驗證 (Auth)<br><b>Shing.Rong.LEE</b>")
     C --> C1("Register/Login (Contractor)")
     C --> C2("Register/Login (Supplier)")
@@ -12,7 +12,7 @@ flowchart TD
     F --> F1(Monitor Multi-Project Dashboard)
     F --> F2(View Analytics Reports)
 
-    %% --- LEE 的工作 ---
+    %% --- HSU 的工作 ---
     A --> B("Contractor (承包商) 功能<br><b>Wan.Zhen.HSU</b>")
     B --> D("採購管理")
     D --> D1(Manage Supplier)
