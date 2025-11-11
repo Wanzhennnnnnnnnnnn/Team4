@@ -3,7 +3,7 @@
 flowchart TD
     A[BuildLink]
 
-    %% --- HS's Work ---
+    %% --- HSU's Work ---
     A --> C("Auth<br><b>Shing.Rong.LEE</b>")
     C --> C1("Register/Login (Contractor)")
     C --> C2("Register/Login (Supplier)")
