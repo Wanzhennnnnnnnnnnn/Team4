@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # 網站容器 (Express.js)
+  buildlink_web:
+    image: node:latest
+    container_name: buildlink_web
+    volumes:
+      - .:/app
+    ports:
+      - "8081:80"
+    working_dir: /app
+    depends_on:
+      - buildlink_db
+    # 啟動命令: 安裝 nodemon，然後啟動 app.js
+    command: bash -c "npm install -g nodemon && nodemon -L app.js"
+    restart: always
+
+  # 資料庫容器 (MySQL)
+  buildlink_db:
+    image: mysql:latest
+    container_name: buildlink_db
+    environment:
+      MYSQL_ROOT_PASSWORD: buildlinkpass
+      MYSQL_DATABASE: BuildLinkApp
+    volumes:
+      - buildlink_db_storage:/var/lib/mysql
+
+volumes:
+  buildlink_db_storage:
+    driver: local
