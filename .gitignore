@@ -1,1 +1,6 @@
-﻿node_modules/
+# 專案依賴，必須忽略
+/node_modules
+/npm-debug.log
+
+# 避免 Git 追蹤到 Docker 容器的特殊檔案
+/buildlink_db_storage
