@@ -25,6 +25,7 @@ services:
       MYSQL_DATABASE: BuildLinkApp
     volumes:
       - buildlink_db_storage:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
 volumes:
   buildlink_db_storage:
