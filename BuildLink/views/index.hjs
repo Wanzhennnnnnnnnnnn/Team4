@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BuildLink - 首頁</title>
+</head>
+<body>
+    <h1>BuildLink 歡迎您，{{username}} ({{name}})</h1>
+    <p>恭喜您成功登入！這是您網站的作業首頁，請點擊以下連結：</p>
+    <ul>
+        <li><a href="/quotations/index">報價管理 (未實作)</a></li>
+        <li><a href="/orders/index">訂購管理 (未實作)</a></li>
+        <li><a href="/customers/index">客戶關係管理 (未實作)</a></li>
+    </ul>
+    <p><a href="/logout">登 出</a></p>
+</body>
+</html>
