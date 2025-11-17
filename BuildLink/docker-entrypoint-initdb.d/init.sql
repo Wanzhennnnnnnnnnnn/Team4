@@ -8,6 +8,16 @@ CREATE TABLE employees (
     emp_name VARCHAR(100) NOT NULL
 );
 
+CREATE TABLE partners (
+    partner_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    company_name VARCHAR(100) NOT NULL UNIQUE,
+    contact_email VARCHAR(100) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'Active'
+);
+
 -- 插入測試資料 (登入帳號)
 INSERT INTO employees (emp_id, emp_password, emp_name) VALUES ('buildlink', '123456', '網站管理者');
 
