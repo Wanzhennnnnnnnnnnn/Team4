@@ -12,8 +12,7 @@ services:
     working_dir: /app
     depends_on:
       - buildlink_db
-    # 啟動命令: 安裝 nodemon，然後啟動 app.js
-    command: bash -c "npm install -g nodemon && nodemon -L app.js"
+    command: node app.js
     restart: always
 
   # 資料庫容器 (MySQL)
@@ -26,6 +25,8 @@ services:
     volumes:
       - buildlink_db_storage:/var/lib/mysql
       - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    # *** 已移除錯誤的 'command' 設置 ***
+    restart: always
 
 volumes:
   buildlink_db_storage:

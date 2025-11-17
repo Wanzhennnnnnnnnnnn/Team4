@@ -11,11 +11,10 @@ router.use((req, res, next) => {
 
 // GET /register: 顯示註冊頁面 (不變)
 router.get('/register', (req, res) => {
-    // 假設您的註冊視圖檔名為 'register.hjs'
     res.render('register', { title: '承包商/供應商註冊' });
 });
 
-// POST /register: 處理註冊表單提交 (註冊成功後導向 /login)
+// POST /register: 處理註冊表單提交
 router.post('/register', (req, res) => {
     const { username, password, company_name, contact_email, role } = req.body;
 
@@ -27,9 +26,7 @@ router.post('/register', (req, res) => {
         return res.send('錯誤：請填寫所有必填欄位。');
     }
 
-    // 假設承包商/供應商註冊後立即啟用
     const initialStatus = 'Active';
-
     const sql = 'INSERT INTO partners (username, password, company_name, contact_email, role, status) VALUES (?, ?, ?, ?, ?, ?)';
     const values = [username, password, company_name, contact_email, role, initialStatus];
 
@@ -42,21 +39,18 @@ router.post('/register', (req, res) => {
             return res.send('系統錯誤，註冊失敗。');
         }
 
-        // 註冊成功後，導向通用登入頁面，附帶成功訊息
         const successMsg = encodeURIComponent('✅ 註冊成功！請使用您的新帳號登入。');
         res.redirect(`/login?status=${successMsg}`);
     });
 });
 
-// **已移除 GET /login 路由，改由 app.js 處理**
-
-// POST /login: 處理通用登入表單提交 (新增通用路由，處理多種身分)
+// POST /login: 處理通用登入表單提交 
 router.post('/login', (req, res) => {
-    // 從表單取得使用者輸入及選擇的身分
     const { username, password, role } = req.body;
 
     if (!connection) {
-        const errorMsg = encodeURIComponent('系統錯誤：資料庫連線遺失。');
+        // 如果資料庫連線失敗，優雅地報錯
+        const errorMsg = encodeURIComponent('系統錯誤：資料庫連線遺失或服務未運行。');
         return res.redirect(`/login?error=${errorMsg}`);
     }
     if (!username || !password || !role) {
@@ -66,28 +60,21 @@ router.post('/login', (req, res) => {
 
     let sql, redirectPath, cookieName, queryParams;
 
-    // 根據選擇的身分 (role) 決定查詢哪個資料表及設定參數
     if (role === '員工') {
-        // 員工登入邏輯（已修正 emp_id/emp_password 欄位）
         sql = "SELECT * FROM employees WHERE emp_id = ? AND emp_password = ?";
-
-        redirectPath = '/'; // 員工首頁使用 / 路由
+        redirectPath = '/'; 
         cookieName = 'user_id';
         queryParams = [username, password];
-
-    } else if (role === 'Contractor' || role === 'Supplier') { // <<< 關鍵修正: 檢查英文角色字串
-        // 假設：夥伴資訊儲存在 partners 表格，且狀態必須是 'Active'
+    } else if (role === 'Contractor' || role === 'Supplier') { 
         sql = "SELECT * FROM partners WHERE username = ? AND password = ? AND status = 'Active' AND role = ?";
-        redirectPath = '/partner/home'; // 夥伴首頁
+        redirectPath = '/partner/home'; 
         cookieName = 'partner_id';
         queryParams = [username, password, role];
     } else {
-        // 無效的身分選項
         const errorMsg = encodeURIComponent('無效的身分選項。');
         return res.redirect(`/login?error=${errorMsg}`);
     }
 
-    // 執行資料庫查詢
     connection.query(sql, queryParams, (err, results) => {
         if (err) {
             console.error('登入查詢錯誤:', err);
@@ -96,23 +83,80 @@ router.post('/login', (req, res) => {
         }
 
         if (results.length > 0) {
-            // 登入成功，設定 Cookie 並導向專屬首頁
-
-            // 關鍵修正：在設定新的 Cookie 之前，先清除另一個身份的 Cookie
             if (role === '員工') {
-                res.clearCookie('partner_id'); // 清除夥伴 Cookie
+                res.clearCookie('partner_id'); 
             } else if (role === 'Contractor' || role === 'Supplier') {
-                res.clearCookie('user_id'); // 清除員工 Cookie
+                res.clearCookie('user_id'); 
             }
 
             res.cookie(cookieName, username, { maxAge: 3600000, httpOnly: true });
             res.redirect(redirectPath);
         } else {
-            // 登入失敗
             const errorMsg = encodeURIComponent('帳號或密碼錯誤，或帳號尚未啟用。');
             res.redirect(`/login?error=${errorMsg}`);
         }
     });
 });
+
+// --- 新增: 忘記密碼功能 (GET 顯示表單) ---
+router.get('/forgot-password', (req, res) => {
+    const error = req.query.error ? decodeURIComponent(req.query.error) : null;
+    const success = req.query.status ? decodeURIComponent(req.query.status) : null;
+    res.render('forgotPassword', {
+        title: '忘記密碼 / 密碼重設',
+        error: error,
+        success: success
+    });
+});
+
+// --- 新增: 忘記密碼功能 (POST 處理重設) ---
+router.post('/forgot-password', (req, res) => {
+    const { username, role, new_password } = req.body;
+
+    if (!connection) {
+        const errorMsg = encodeURIComponent('系統錯誤：資料庫連線遺失。');
+        return res.redirect(`/forgot-password?error=${errorMsg}`);
+    }
+    if (!username || !role || !new_password) {
+        const errorMsg = encodeURIComponent('請輸入帳號、新密碼並選擇您的身分。');
+        return res.redirect(`/forgot-password?error=${errorMsg}`);
+    }
+
+    let sql, idColumn, passwordColumn;
+    let table = '';
+
+    if (role === '員工') {
+        table = 'employees';
+        idColumn = 'emp_id';
+        passwordColumn = 'emp_password';
+    } else if (role === 'Contractor' || role === 'Supplier') {
+        table = 'partners';
+        idColumn = 'username';
+        passwordColumn = 'password';
+    } else {
+        const errorMsg = encodeURIComponent('無效的身分選項。');
+        return res.redirect(`/forgot-password?error=${errorMsg}`);
+    }
+
+    sql = `UPDATE ${table} SET ${passwordColumn} = ? WHERE ${idColumn} = ?`;
+    const values = [new_password, username];
+
+    connection.query(sql, values, (err, result) => {
+        if (err) {
+            console.error('密碼重設資料庫錯誤:', err);
+            const errorMsg = encodeURIComponent('系統錯誤，密碼重設失敗。');
+            return res.redirect(`/forgot-password?error=${errorMsg}`);
+        }
+
+        if (result.affectedRows === 0) {
+            const errorMsg = encodeURIComponent('帳號不存在或身分選擇錯誤。');
+            return res.redirect(`/forgot-password?error=${errorMsg}`);
+        }
+
+        const successMsg = encodeURIComponent('✅ 密碼重設成功！請使用您的新密碼登入。');
+        res.redirect(`/login?status=${successMsg}`);
+    });
+});
+
 
 module.exports = router;

@@ -2,9 +2,8 @@
 <html>
 
 <head>
-        <!-- 標題更新為通用系統登入 -->
-        <title>BuildLink - 系統登入</title>
-        <style>
+    <title>BuildLink - 系統登入</title>
+    <style>
         /* --- 全局和背景樣式 --- */
         body {
             font-family: 'Inter', Arial, sans-serif;
@@ -21,14 +20,11 @@
         .login-container {
             background-color: #fff;
             padding: 35px 40px;
-            /* 緊湊的內邊距 */
             border-radius: 12px;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
             width: 350px;
             border: 1px solid #e0e6ed;
             text-align: center;
-            /* 讓內容置中 */
-            /* 限制最大高度，避免滾輪 */
             max-height: 90vh;
             overflow-y: auto;
         }
@@ -37,7 +33,6 @@
         h1 {
             text-align: center;
             color: #000;
-            /* 確保標題是純黑色 */
             margin-bottom: 20px;
             font-size: 2em;
             font-weight: 800;
@@ -46,7 +41,6 @@
         /* --- 表單群組和標籤樣式 --- */
         .form-group {
             margin-bottom: 12px;
-            /* 緊湊間距 */
             text-align: left;
         }
 
@@ -55,7 +49,6 @@
             margin-bottom: 5px;
             font-weight: 700;
             color: #1a1a1a;
-            /* 標籤使用深色 */
             font-size: 1em;
         }
 
@@ -69,7 +62,6 @@
             box-sizing: border-box;
             transition: border-color 0.3s, box-shadow 0.3s;
             background-color: #fff;
-            /* 輸入框純白背景 */
         }
 
         .form-group input:focus,
@@ -105,7 +97,6 @@
             width: 100%;
             padding: 12px;
             background-color: #3b82f6;
-            /* 主藍色 */
             color: white;
             border: none;
             border-radius: 6px;
@@ -126,7 +117,7 @@
             transform: translateY(1px);
         }
 
-        /* --- 註冊連結樣式 --- */
+        /* --- 連結樣式 --- */
         .register-link {
             text-align: center;
             font-size: 0.9em;
@@ -136,61 +127,61 @@
         }
 
         .register-link a {
-            color: #059669;
-            /* 綠色連結，確保可見 */
+            color: #1a1a1a; /* <--- 黑色字體 */
             text-decoration: none;
             font-weight: 600;
             transition: color 0.3s;
         }
 
         .register-link a:hover {
-            color: #047857;
+            color: #333;
             text-decoration: underline;
         }
     </style>
 </head>
 
 <body>
-        <div class="login-container">
-                <h1>BuildLink 系統登入</h1>
+    <div class="login-container">
+        <h1>BuildLink 系統登入</h1>
 
-                <!-- 訊息顯示 -->
-                {{#success}}
-                    <p class="success-message">{{success}}</p>
-                {{/success}}
+        <!-- 訊息顯示 -->
+        {{#success}}
+        <p class="success-message">{{success}}</p>
+        {{/success}}
 
-                {{#error}}
-                    <p class="error-message">錯誤：{{error}}</p>
-                {{/error}}
-               
-                <form action="/login" method="POST">
-                       
-                        <!-- 身分選擇下拉選單 -->
-                        <div class="form-group">
-                                <label for="role">身分選擇</label>
-                                <select id="role" name="role" required>
-                                        <option value="" disabled selected>請選擇您的身分</option>
-                                        <option value="員工">員工</option>
-                                        <option value="Contractor">承包商</option>
-                                        <option value="Supplier">供應商</option>
-                                    </select>
-                            </div>
-                       
-                        <div class="form-group">
-                                <label for="username">帳號 (員工編號/夥伴帳號)</label>
-                                <input type="text" id="username" name="username" required>
-                            </div>
-                        <div class="form-group">
-                                <label for="password">密碼</label>
-                                <input type="password" id="password" name="password" required>
-                            </div>
-                        <button type="submit">登 入</button>
-                    </form>
+        {{#error}}
+        <p class="error-message">{{error}}</p>
+        {{/error}}
 
-                <p class="register-link">
-                        <a href="/register">▶ 承包商/供應商註冊入口</a>
-                    </p>
-                </div>
+        <form action="/login" method="POST">
+            
+            <div class="form-group">
+                <label for="role">身分選擇</label>
+                <select id="role" name="role" required>
+                    <option value="" disabled selected>請選擇您的身分</option>
+                    <option value="員工">員工</option>
+                    <option value="Contractor">承包商</option>
+                    <option value="Supplier">供應商</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="username">帳號 (員工編號/夥伴帳號)</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">登 入</button>
+        </form>
+
+        <p class="register-link">
+            <!-- 最終正確的連結位置 -->
+            <a href="/forgot-password">▶ 忘記密碼 / 密碼重設</a><br>
+            <a href="/register">▶ 承包商/供應商註冊入口</a>
+        </p>
+    </div>
 </body>
 
 </html>
