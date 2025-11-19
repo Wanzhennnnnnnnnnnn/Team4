@@ -1,58 +1,165 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>BuildLink - 承包商/供應商註冊</title>
+    <title>BuildLink - Join Us</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-        h1 { text-align: center; color: #333; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #218838; }
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px 0;
+            margin: 0;
+            color: #333;
+        }
+
+        .login-container {
+            background-color: #fff;
+            padding: 35px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            width: 400px;
+            border: 1px solid #e0e6ed;
+            text-align: center;
+        }
+
+        h1 {
+            text-align: center;
+            color: #000;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            font-weight: 800;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1em;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #2b6cb0;
+        }
+        
+        .error-message {
+            background-color: #fed7d7;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            text-align: left;
+        }
+
+        .register-link {
+            text-align: center;
+            font-size: 0.9em;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            color: #666;
+        }
+
+        .register-link a {
+            color: #3182ce;
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        
+        .register-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>外部夥伴註冊</h1>
-        <p>請填寫貴公司資料以成為我們的承包商或供應商。</p>
+    <div class="login-container">
+        <h1>Join BuildLink</h1>
+        <p class="subtitle">Start sourcing materials and managing projects.</p>
+
+        {{#error}}
+        <p class="error-message">{{error}}</p>
+        {{/error}}
 
         <form action="/register" method="POST">
+            
             <div class="form-group">
-                <label for="company_name">公司名稱</label>
-                <input type="text" id="company_name" name="company_name" required>
+                <label for="name">Company Name / Full Name</label>
+                <input type="text" id="name" name="name" required placeholder="e.g., Grand Construction Co.">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required placeholder="This will be your login ID">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="text" id="phone" name="phone" placeholder="e.g., 0912-345-678">
             </div>
             
             <div class="form-group">
-                <label for="contact_email">聯絡信箱</label>
-                <input type="email" id="contact_email" name="contact_email" required>
+                <label for="address">Company Address</label>
+                <input type="text" id="address" name="address" placeholder="e.g., 101 Xinyi Road, Taipei...">
             </div>
 
             <div class="form-group">
-                <label for="username">設定登入帳號 (例如統一編號)</label>
-                <input type="text" id="username" name="username" required>
+                <label for="password">Set Password</label>
+                <input type="password" id="password" name="password" required placeholder="Create a secure password">
             </div>
 
-            <div class="form-group">
-                <label for="password">設定密碼</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-
-            <div class="form-group">
-                <label for="role">請選擇身份</label>
-                <select id="role" name="role" required>
-                    <option value="">-- 請選擇 --</option>
-                    <option value="Contractor">承包商 (Contractor)</option>
-                    <option value="Supplier">供應商 (Supplier)</option>
-                </select>
-            </div>
-
-            <button type="submit">註冊並送出審核</button>
+            <button type="submit">Create Account</button>
         </form>
-        <p style="margin-top: 20px;">
-            <a href="/login">返回員工登入頁面</a>
-        </p>
+
+        <div class="register-link">
+            Already have an account? <a href="/login">Log In</a>
+        </div>
     </div>
 </body>
 </html>

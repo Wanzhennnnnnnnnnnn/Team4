@@ -1,6 +1,16 @@
-# 專案依賴，必須忽略
-/node_modules
-/npm-debug.log
+忽略依賴套件
 
-# 避免 Git 追蹤到 Docker 容器的特殊檔案
-/buildlink_db_storage
+node_modules/
+
+忽略系統檔案
+
+.DS_Store
+Thumbs.db
+
+忽略設定檔 (包含密碼)
+
+config.js
+
+忽略 Log 檔
+
+*.log
