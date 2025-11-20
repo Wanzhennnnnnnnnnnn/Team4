@@ -1,0 +1,16 @@
+忽略依賴套件
+
+node_modules/
+
+忽略系統檔案
+
+.DS_Store
+Thumbs.db
+
+忽略設定檔 (包含密碼)
+
+config.js
+
+忽略 Log 檔
+
+*.log

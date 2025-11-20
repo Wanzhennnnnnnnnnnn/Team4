@@ -1,0 +1,334 @@
+--import--
+docker cp C:\Users\417\Desktop\營建資訊系統之軟體工程\companies.tsv assignment_wan :/var/lib/mysql-files/
+docker cp C:\Users\417\Desktop\營建資訊系統之軟體工程\materials.tsv assignment_wan :/var/lib/mysql-files/
+docker cp C:\Users\417\Desktop\營建資訊系統之軟體工程\transactions.tsv assignment_wan :/var/lib/mysql-files/
+
+-- --
+docker run --name assignment_wan -p 3306:3306 --env "MYSQL_ROOT_PASSWORD=417" --detach mysql:latest
+docker start assignment_wan
+docker exec -it assignment_wan mysql -p
+
+-------------------------
+-- 建立並使用新資料庫
+-------------------------
+
+CREATE DATABASE assignment_db;
+USE assignment_db;
+
+-------------------------
+-- 建立原始表格並載入資料
+-------------------------
+
+-- 1. 建立 companies 的原始表格
+CREATE TABLE companies (
+    company_id CHAR(8),
+    name VARCHAR(255),
+    description TEXT,
+    address TEXT,
+    phone VARCHAR(255),
+    email VARCHAR(255),
+    comments TEXT
+);
+-- 2. 建立 materials 的原始表格
+CREATE TABLE materials (
+    material_id CHAR(8),
+    Item TEXT,
+    Unit VARCHAR(255),
+    PriceAvg DECIMAL(10, 2),
+    PriceStdev DECIMAL(10, 2),
+    NoSamples INT
+);
+
+-- 3. 建立 transactions 的原始表格
+CREATE TABLE transactions (
+    transaction_id CHAR(8),
+    company_id CHAR(8),
+    material_id CHAR(8),
+    quantity DECIMAL(10, 2),
+    price_per_unit DECIMAL(10, 2),
+    discount_rate INT,
+    total_price DECIMAL(12, 2),
+    transaction_date DATE,
+    notes TEXT
+);
+
+-- 4. 載入 companies.tsv
+LOAD DATA INFILE '/var/lib/mysql-files/companies.tsv'
+INTO TABLE companies
+FIELDS TERMINATED BY '\t'
+OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS;
+
+-- 5. 載入 materials.tsv
+LOAD DATA INFILE '/var/lib/mysql-files/materials.tsv'
+INTO TABLE materials
+FIELDS TERMINATED BY '\t'
+OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS;
+
+-- 6. 載入 transactions.tsv
+LOAD DATA INFILE '/var/lib/mysql-files/transactions.tsv'
+INTO TABLE transactions
+FIELDS TERMINATED BY '\t'
+OPTIONALLY ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS;
+
+-------------------------
+-- 正規化表格資料
+-------------------------
+
+-- 1.查找所有在 'companies' 表格中重複的 company_id
+SELECT company_id, COUNT(*)
+FROM companies
+GROUP BY company_id
+HAVING COUNT(*) > 1;
+
+-- 2.找出所有 `company_id` 重複，且其他任一欄位內容也不一樣的 ID
+SELECT 
+    company_id,
+    COUNT(*) AS total_rows,
+    COUNT(DISTINCT name) AS distinct_names,
+    COUNT(DISTINCT description) AS distinct_descriptions,
+    COUNT(DISTINCT address) AS distinct_addresses,
+    COUNT(DISTINCT phone) AS distinct_phones,
+    COUNT(DISTINCT email) AS distinct_emails
+FROM 
+    companies
+GROUP BY 
+    company_id
+HAVING 
+    COUNT(*) > 1 -- 篩選出所有重複的 ID
+    AND (
+        -- 檢查任一欄位的「不同版本」是否大於 1
+        COUNT(DISTINCT name) > 1
+        OR COUNT(DISTINCT description) > 1
+        OR COUNT(DISTINCT address) > 1
+        OR COUNT(DISTINCT phone) > 1
+        OR COUNT(DISTINCT email) > 1
+        OR COUNT(DISTINCT comments) > 1
+    );
+
+-- 3. 找出 `materials` 表格中所有重複的 material_id
+SELECT material_id, COUNT(*)
+FROM materials
+GROUP BY material_id
+HAVING COUNT(*) > 1;
+
+Drop TABLE categories,final_materials;
+
+
+-- 4. 建立 Categories (類別) 表格
+CREATE TABLE categories (
+    category_id INT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- 5. 建立 Units (單位) 表格
+CREATE TABLE units (
+    unit_id INT AUTO_INCREMENT PRIMARY KEY,
+    unit_name VARCHAR(50) UNIQUE NOT NULL
+);
+
+-- 6. 建立最終的 final_companies (公司) 表格 (3NF)
+-- 我們在這裡就直接設定好 PRIMARY KEY
+CREATE TABLE final_companies (
+    company_id CHAR(8) NOT NULL PRIMARY KEY,
+    name VARCHAR(255),
+    description TEXT,
+    address TEXT,
+    phone VARCHAR(255),
+    email VARCHAR(255),
+    comments TEXT
+);
+
+-- 7. 建立最終的 final_materials (材料) 表格 (3NF)
+-- 連接到 categories 和 Units
+CREATE TABLE final_materials (
+    material_id CHAR(8) NOT NULL PRIMARY KEY,
+    Item TEXT,
+    unit_id INT,
+    category_id INT,
+    PriceAvg DECIMAL(10, 2),
+    PriceStdev DECIMAL(10, 2),
+    NoSample INT,
+    CONSTRAINT fk_unit FOREIGN KEY (unit_id) REFERENCES units(unit_id),
+    CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES categories(category_id)
+);
+
+-- Drop Table final_materials;
+
+-- 8. 填充 categories 表格
+INSERT INTO categories (category_name)
+VALUES
+    ('Labor Roles'),
+    ('Raw Materials'),    
+    ('Work Activities'),
+    ('Quality Standards'),
+	('Products & Components');
+
+-- 9. 填充 units 表格 (從臨時數據中提取獨立的單位)
+INSERT INTO units (unit_name)
+SELECT DISTINCT unit FROM materials WHERE Unit IS NOT NULL AND Unit != '';
+
+DROP TABLE final_materials,categories;
+
+-- 10. 填充 final_companies 表格，並跳過重複id的資料
+INSERT IGNORE INTO final_companies (company_id, name, description, address, phone, email, comments)
+SELECT company_id, name, description, address, phone, email, comments
+FROM companies;
+
+-- 11. 填充 final_materials 表格 (最複雜的轉換)
+-- 我們使用 CASE 語句來根據 'Item' 欄位中的關鍵字分配 category_id
+-- 並 JOIN units 表格來獲取 unit_id
+INSERT INTO final_materials (material_id, Item, unit_id, category_id, PriceAvg, PriceStdev, NoSample)
+SELECT
+    m.material_id,    
+    -- 修正 4: 移除 "Products." 和 "Products: " 前綴
+    TRIM(REPLACE(REPLACE(MAX(m.Item), 'Products. ', ''), 'Products: ', '')) AS Item,    
+    MAX(u.unit_id) AS unit_id,
+    (CASE
+        -- 類別: 品質檢驗標準 (最優先)
+        WHEN MAX(m.Item) LIKE 'Quality management.%' THEN
+            (SELECT category_id FROM categories WHERE category_name = 'Quality Standards')
+            
+        -- 類別: 人力資源
+        WHEN MAX(m.Item) LIKE 'ordinary workers%' 
+            OR MAX(m.Item) LIKE 'Technician%' 
+            OR MAX(m.Item) LIKE '%carpentry%' 
+            OR MAX(m.Item) LIKE 'Other technical workers%' 
+            OR MAX(m.Item) LIKE '%Plasterer%' 
+            OR MAX(m.Item) LIKE '%technician%' 
+            OR MAX(m.Item) LIKE '%Technician'
+            OR MAX(m.Item) = 'engineer'
+            OR MAX(m.Item) LIKE '%operator%' 
+        THEN
+            (SELECT category_id FROM categories WHERE category_name = 'Labor Roles')
+
+        -- 修正 3: "機具設備" (Equipment) 的 WHEN 區塊已刪除
+        -- ( 'Crawler type%', '%t. Wheeled%' 等關鍵字現在會自動進入 ELSE )
+
+        -- 類別: 工作項目 (施工的 "動作")
+        WHEN MAX(m.Item) LIKE '%excavation%' 
+            OR MAX(m.Item) LIKE '%Backfill%' 
+            OR MAX(m.Item) LIKE '%paving%' 
+            OR MAX(m.Item) LIKE '%demolition%' 
+            OR MAX(m.Item) LIKE '%transport%' 
+            OR MAX(m.Item) LIKE '%measurement%' 
+            OR MAX(m.Item) LIKE 'Grass Planting%' 
+            OR MAX(m.Item) LIKE 'Planting.%' 
+            OR MAX(m.Item) LIKE '%Driving and pulling out%' 
+            OR MAX(m.Item) LIKE 'Paint. One base, two coats%'
+            OR MAX(m.Item) LIKE 'Road construction and restoration%'
+            OR MAX(m.Item) LIKE 'Earthwork. Earthwork transportation%'
+        THEN
+            (SELECT category_id FROM categories WHERE category_name = 'Work Activities')
+
+        -- 類別: 原物料 (會被消耗的)
+        WHEN MAX(m.Item) LIKE '%concrete%' 
+            OR MAX(m.Item) LIKE '%Cement%' 
+            OR MAX(m.Item) LIKE '%mortar%' 
+            OR MAX(m.Item) LIKE '%Steel Rebar%' 
+            OR MAX(m.Item) LIKE 'Metal Materials%' 
+            OR MAX(m.Item) LIKE 'rebar.%' 
+            OR MAX(m.Item) LIKE '%aggregate%' 
+            OR MAX(m.Item) LIKE 'Plywood%' 
+            OR MAX(m.Item) LIKE 'Timber for formwork%' 
+            OR MAX(m.Item) LIKE 'Asphalt adhesive%' 
+            OR MAX(m.Item) LIKE 'Asphalt concrete%' 
+            OR MAX(m.Item) LIKE 'Flexible Paving%' 
+            OR MAX(m.Item) LIKE 'Granules.%' 
+            OR MAX(m.Item) LIKE 'Stone.%' 
+            OR MAX(m.Item) LIKE 'Selective backfill material%'
+            OR MAX(m.Item) LIKE 'Iron nails%'
+            OR MAX(m.Item) LIKE 'Metal. Iron wire%'
+            OR MAX(m.Item) = 'Aluminum Sheet'
+            OR MAX(m.Item) LIKE 'Stainless steel plate%'
+            OR MAX(m.Item) = 'Adhesive'
+        THEN
+            (SELECT category_id FROM categories WHERE category_name = 'Raw Materials')
+
+        -- 類別: 成品與構件 (包含所有 ELSE，例如管材、安全設備、以及現在的機具設備)
+        ELSE
+            (SELECT category_id FROM categories WHERE category_name = 'Products & Components')
+            
+    END) AS category_id,        
+    AVG(m.PriceAvg) AS PriceAvg,
+    AVG(m.PriceStdev) AS PriceStdev,
+    SUM(m.NoSamples) AS NoSamples
+FROM
+    materials m
+LEFT JOIN
+    units u ON m.Unit = u.unit_name -- 透過 unit_name 找到對應的 unit_id
+GROUP BY
+    m.material_id;
+    
+
+-- 12. 建立最終的 final_transactions (交易) 表格 (3NF)
+-- 這裡的外鍵 (FOREIGN KEY) 會自動幫你過濾掉無效的 ID
+CREATE TABLE final_transactions (
+    transaction_id CHAR(8) NOT NULL PRIMARY KEY,
+    company_id CHAR(8),
+    material_id CHAR(8),
+    quantity DECIMAL(10, 2),
+    price_per_unit DECIMAL(10, 2),
+    discount_rate INT,
+    total_price DECIMAL(12, 2),
+    transaction_date DATE,
+    notes TEXT,
+    FOREIGN KEY (company_id) REFERENCES final_companies(company_id),
+    FOREIGN KEY (material_id) REFERENCES final_materials(material_id)
+);
+
+-- 13. 填充 final_transactions 表格
+-- 關鍵：我們只從 transactions 中 "SELECT" 那些
+-- "company_id" 存在於final_companies 表
+-- "material_id" 存在於final_materials 表
+-- 中的資料。
+INSERT IGNORE INTO final_transactions (
+    transaction_id, company_id, material_id, quantity, price_per_unit, 
+    discount_rate, total_price, transaction_date, notes
+)
+SELECT 
+    st.transaction_id, st.company_id, st.material_id, st.quantity, st.price_per_unit, 
+    st.discount_rate, st.total_price, st.transaction_date, st.notes
+FROM 
+    transactions st
+WHERE
+    -- 這裡實現了你說的「只留下在 companies 及 materials 表格中都有的資料」
+    EXISTS (SELECT 1 FROM final_companies c WHERE c.company_id = st.company_id)
+    AND EXISTS (SELECT 1 FROM final_materials m WHERE m.material_id = st.material_id)
+    AND st.transaction_date >= '2000-01-01';
+
+;
+
+-- 13. 填充 final_transactions 表格 (最終強化版)
+-- (包含了 ID 檢查、日期檢查、以及你提議的「價格有效性」檢查)
+
+INSERT IGNORE INTO final_transactions (
+    transaction_id, company_id, material_id, quantity, price_per_unit, 
+    discount_rate, total_price, transaction_date, notes
+)
+SELECT 
+    st.transaction_id, st.company_id, st.material_id, st.quantity, st.price_per_unit, 
+    st.discount_rate, st.total_price, st.transaction_date, st.notes
+FROM 
+    transactions st
+WHERE
+    -- 檢查 1: ID 完整性 (你原本的)
+    EXISTS (SELECT 1 FROM final_companies c WHERE c.company_id = st.company_id)
+    AND EXISTS (SELECT 1 FROM final_materials m WHERE m.material_id = st.material_id)
+    
+    -- 檢查 2: 日期業務邏輯 (你原本的)
+    AND st.transaction_date >= '2000-01-01'
+    
+    -- 檢查 3: 價格有效性 (你新增的)
+    AND st.quantity > 0         -- 數量必須是正數
+    AND st.price_per_unit >= 0  -- 單價必須大於或等於 0 (也許有免費樣品)
+    
+    -- 檢查 4: 總價計算驗證 (你新增的)
+    -- 我們檢查「計算出的總價」和「檔案中的總價」之間的「絕對差值」是否小於 5
+    -- (這允許了 5 元以內的四捨五入誤差)
+    AND ABS(st.total_price - (st.quantity * st.price_per_unit * (1 - st.discount_rate / 100))) < 5;
