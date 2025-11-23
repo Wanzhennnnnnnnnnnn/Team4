@@ -1,0 +1,55 @@
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h2 class="text-2xl font-bold text-slate-800">Transaction History</h2>
+        <a href="/contractor/dashboard" class="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <p class="text-slate-500 text-sm">All your historical transactions, grouped by supplier.</p>
+
+    {{#groups}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-white p-2 rounded-lg border border-slate-200 text-blue-600">
+                    <i data-lucide="truck" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-800">{{supplierName}}</h4>
+                    <p class="text-xs text-slate-500">Supplier Group</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-slate-500 uppercase tracking-wide">Total Spend</p>
+                <p class="font-bold text-slate-800 text-lg">${{totalSpent}}</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-white text-slate-500 font-medium border-b border-slate-100">
+                    <tr>
+                        <th class="px-6 py-3 w-24">Date</th>
+                        <th class="px-6 py-3">Item / Description</th>
+                        <th class="px-6 py-3 w-32 text-right">Qty</th>
+                        <th class="px-6 py-3 w-32 text-right">Unit Price</th>
+                        <th class="px-6 py-3 w-32 text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {{#transactions}}
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="px-6 py-3 text-slate-500 whitespace-nowrap">{{TransactionDate}}</td>
+                        <td class="px-6 py-3 font-medium text-slate-700">{{MaterialName}} <span class="text-xs text-slate-400 font-normal block">{{CategoryName}}</span></td>
+                        <td class="px-6 py-3 text-right text-slate-600">{{Quantity}}</td>
+                        <td class="px-6 py-3 text-right text-slate-600">${{PricePerUnit}}</td>
+                        <td class="px-6 py-3 text-right font-bold text-slate-800">${{TotalPrice}}</td>
+                    </tr>
+                    {{/transactions}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {{/groups}}
+</div>

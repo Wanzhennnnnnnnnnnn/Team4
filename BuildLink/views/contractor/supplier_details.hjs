@@ -1,0 +1,215 @@
+<div class="max-w-4xl mx-auto pb-24"> 
+    
+    <!-- 1. 頂部導航與供應商資訊 -->
+    <div class="mb-8">
+        <a href="/contractor/suppliers" class="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 mb-4 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Suppliers
+        </a>
+        
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row items-start justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">{{supplier.CompanyName}}</h1>
+                
+                <div class="flex flex-col gap-2 mt-3 text-sm text-slate-500">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-4 h-4 text-slate-400"></i> 
+                        <span>{{supplier.Address}}</span>
+                    </div>
+                    <!-- ★★★ 新增電話顯示 ★★★ -->
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="phone" class="w-4 h-4 text-slate-400"></i> 
+                        <span>{{supplier.PhoneNumber}}</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="mail" class="w-4 h-4 text-slate-400"></i> 
+                        <span>{{supplier.Email}}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 self-start">
+                <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-current"></i>
+                <span class="text-amber-700 font-bold text-sm">{{supplier.Rating}}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表單開始 -->
+    <form id="orderForm" action="/contractor/supplier/{{supplier.SupplierID}}/create-order" method="POST">
+        
+        <!-- 2. 訂單設定 -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+            <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="settings-2" class="w-5 h-5 text-blue-600"></i> 
+                Order Configuration
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Select Project <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <select name="project_id" id="projectSelect" required class="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="" disabled {{^projects.0.isSelected}}selected{{/projects.0.isSelected}}>Select a project...</option>
+                            {{#projects}}
+                            <option value="{{ProjectID}}" {{#isSelected}}selected{{/isSelected}}>{{ProjectName}}</option>
+                            {{/projects}}
+                        </select>
+                        <i data-lucide="chevron-down" class="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none"></i>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Choose which project budget this comes from.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Expected Delivery <span class="text-red-500">*</span></label>
+                    <input type="date" name="delivery_date" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 材料清單 -->
+        <div class="space-y-4">
+            <div class="flex justify-between items-end px-2">
+                <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <i data-lucide="package" class="w-5 h-5 text-blue-600"></i>
+                    Available Materials
+                </h3>
+                <span class="text-sm text-slate-500">{{supplier.items.length}} items found</span>
+            </div>
+
+            {{#supplier.items}}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row items-center gap-4 transition-all hover:shadow-md">
+                <div class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0">
+                    <i data-lucide="box" class="w-6 h-6"></i>
+                </div>
+                <div class="flex-1 text-center sm:text-left">
+                    <h4 class="font-bold text-slate-800">{{name}}</h4>
+                    <div class="flex flex-wrap gap-2 justify-center sm:justify-start mt-1">
+                        <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">{{category}}</span>
+                        <span class="text-xs text-slate-400">Stock: {{stock}}</span>
+                    </div>
+                </div>
+                <div class="text-right px-4">
+                    <div class="font-bold text-slate-800 text-lg">${{price}}</div>
+                    <div class="text-xs text-slate-500">per {{unit}}</div>
+                </div>
+                <div class="flex items-center gap-3 bg-slate-50 rounded-lg p-1 border border-slate-200">
+                    <button type="button" onclick="updateQty('{{id}}', -1, {{price}})" class="w-8 h-8 flex items-center justify-center rounded-md bg-white shadow-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                        <i data-lucide="minus" class="w-4 h-4"></i>
+                    </button>
+                    <input type="number" id="qty-{{id}}" value="0" min="0" max="{{stock}}" readonly 
+                           class="w-12 text-center bg-transparent border-none font-bold text-slate-800 focus:ring-0 p-0"
+                           data-id="{{id}}" data-price="{{price}}" data-name="{{name}}">
+                    <button type="button" onclick="updateQty('{{id}}', 1, {{price}})" class="w-8 h-8 flex items-center justify-center rounded-md bg-white shadow-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            {{/supplier.items}}
+
+            {{^supplier.items}}
+            <div class="text-center py-12 bg-white border border-dashed border-slate-200 rounded-xl">
+                <div class="inline-flex p-4 rounded-full bg-slate-50 text-slate-400 mb-3">
+                    <i data-lucide="package-x" class="w-8 h-8"></i>
+                </div>
+                <p class="text-slate-500">No materials available from this supplier yet.</p>
+            </div>
+            {{/supplier.items}}
+        </div>
+
+        <input type="hidden" name="cart_data" id="cartDataInput">
+
+        <!-- 4. 底部固定結帳欄 -->
+        <div class="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] p-4 z-10">
+            <div class="max-w-4xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-50 p-2 rounded-lg text-blue-600 hidden sm:block">
+                        <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-bold tracking-wide">Total Estimated Cost</p>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-2xl font-bold text-slate-900" id="displayTotal">$0</span>
+                            <span class="text-sm text-slate-500" id="displayCount">(0 items)</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" onclick="submitOrder()" id="checkoutBtn" disabled 
+                        class="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">
+                    <span>Create Purchase Order</span>
+                    <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    let cart = {}; 
+
+    function updateQty(id, change, price) {
+        const input = document.getElementById(`qty-${id}`);
+        let currentVal = parseInt(input.value) || 0;
+        let maxVal = parseInt(input.getAttribute('max')) || 9999;
+        
+        let newVal = currentVal + change;
+        if (newVal < 0) newVal = 0;
+        if (newVal > maxVal) newVal = maxVal; 
+
+        input.value = newVal;
+        
+        if (newVal > 0) {
+            cart[id] = newVal;
+            input.closest('.bg-white').classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+        } else {
+            delete cart[id];
+            input.closest('.bg-white').classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50');
+        }
+
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        let totalAmount = 0;
+        let totalItems = 0;
+        let cartArray = [];
+
+        document.querySelectorAll('input[id^="qty-"]').forEach(input => {
+            let qty = parseInt(input.value) || 0;
+            if (qty > 0) {
+                let price = parseFloat(input.dataset.price);
+                let id = input.dataset.id;
+                let name = input.dataset.name;
+                
+                totalAmount += (qty * price);
+                totalItems += qty;
+
+                cartArray.push({
+                    id: id,
+                    name: name,
+                    qty: qty,
+                    price: price
+                });
+            }
+        });
+
+        document.getElementById('displayTotal').innerText = '$' + totalAmount.toLocaleString();
+        document.getElementById('displayCount').innerText = `(${totalItems} items)`;
+        document.getElementById('cartDataInput').value = JSON.stringify(cartArray);
+
+        const btn = document.getElementById('checkoutBtn');
+        if (totalItems > 0) {
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+        }
+    }
+
+    function submitOrder() {
+        const projectSelect = document.getElementById('projectSelect');
+        if (!projectSelect.value) {
+            alert('Please select a project first!');
+            projectSelect.focus();
+            return;
+        }
+        document.getElementById('orderForm').submit();
+    }
+</script>

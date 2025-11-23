@@ -1,0 +1,107 @@
+-- 確保使用正確的資料庫
+USE assignment_db;
+
+-- 1. 清除舊表 (反向順序)
+DROP TABLE IF EXISTS POItems;
+DROP TABLE IF EXISTS PurchaseOrder;
+DROP TABLE IF EXISTS SupplierMaterial;
+DROP TABLE IF EXISTS Materials;
+DROP TABLE IF EXISTS Suppliers;
+DROP TABLE IF EXISTS Projects;    -- [新增]
+DROP TABLE IF EXISTS Contractors;
+DROP TABLE IF EXISTS Categories;
+DROP TABLE IF EXISTS Units;
+DROP TABLE IF EXISTS Users;
+DROP TABLE IF EXISTS Role;
+DROP TABLE IF EXISTS Companies ;
+
+-- 2. 基礎表格
+CREATE TABLE IF NOT EXISTS Categories (
+    CategoryID INT PRIMARY KEY,
+    CategoryName VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS Units (
+    UnitID INT PRIMARY KEY,
+    UnitName VARCHAR(50) NOT NULL
+);
+
+-- 3. 供應商表
+CREATE TABLE IF NOT EXISTS Suppliers (
+    SupplierID VARCHAR(50) PRIMARY KEY,
+    SupplierName VARCHAR(255) NOT NULL,
+    Description TEXT,
+    Address VARCHAR(255),
+    PhoneNumber VARCHAR(50),
+    Email VARCHAR(100),
+    ContactPerson TEXT,
+    Rating DECIMAL(3, 2) DEFAULT 0.00
+);
+
+-- 4. 承包商表
+CREATE TABLE IF NOT EXISTS Contractors (
+    ContractorID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) UNIQUE NOT NULL,
+    Password VARCHAR(255) NOT NULL,
+    PhoneNumber VARCHAR(50),
+    Address VARCHAR(255),
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. [新增] 專案表 (承包商的工地/建案)
+CREATE TABLE IF NOT EXISTS Projects (
+    ProjectID INT PRIMARY KEY AUTO_INCREMENT,
+    ContractorID INT,
+    ProjectName VARCHAR(255) NOT NULL,
+    Location VARCHAR(255),
+    StartDate DATE,
+    Status VARCHAR(50) DEFAULT 'Planning', -- Planning, In Progress, Completed
+    FOREIGN KEY (ContractorID) REFERENCES Contractors(ContractorID)
+);
+
+-- 6. 材料表
+CREATE TABLE IF NOT EXISTS Materials (
+    MaterialID VARCHAR(50) PRIMARY KEY,
+    MaterialName VARCHAR(255) NOT NULL,
+    UnitID INT, 
+    CategoryID INT, 
+    FOREIGN KEY (UnitID) REFERENCES Units(UnitID),
+    FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID)
+);
+
+-- 7. 供應商-材料關聯表
+CREATE TABLE IF NOT EXISTS SupplierMaterial (
+    ID INT PRIMARY KEY AUTO_INCREMENT,
+    SupplierID VARCHAR(50),
+    MaterialID VARCHAR(50),
+    PricePerUnit DECIMAL(10, 2),
+    AvailableStock INT,
+    FOREIGN KEY (SupplierID) REFERENCES Suppliers(SupplierID),
+    FOREIGN KEY (MaterialID) REFERENCES Materials(MaterialID)
+);
+
+-- 8. 採購單 (連結 專案、承包商、供應商)
+CREATE TABLE IF NOT EXISTS PurchaseOrder (
+    POID INT PRIMARY KEY AUTO_INCREMENT,
+    ContractorID INT,
+    ProjectID INT,          -- [新增] 連結到特定專案
+    SupplierID VARCHAR(50),
+    OrderDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    Status VARCHAR(50) DEFAULT 'Pending',
+    TotalAmount DECIMAL(15, 2),
+    FOREIGN KEY (ContractorID) REFERENCES Contractors(ContractorID),
+    FOREIGN KEY (ProjectID) REFERENCES Projects(ProjectID),
+    FOREIGN KEY (SupplierID) REFERENCES Suppliers(SupplierID)
+);
+
+-- 9. 訂單細項
+CREATE TABLE IF NOT EXISTS POItems (
+    ItemID INT PRIMARY KEY AUTO_INCREMENT,
+    POID INT,
+    MaterialID VARCHAR(50),
+    Quantity INT,
+    UnitPrice DECIMAL(10, 2),
+    FOREIGN KEY (POID) REFERENCES PurchaseOrder(POID),
+    FOREIGN KEY (MaterialID) REFERENCES Materials(MaterialID)
+);

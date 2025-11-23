@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BuildLink - 夥伴登入</title>
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        .login-container { 
+            background-color: #f0fff0; /* 淺綠色背景 */
+            border: 1px solid #28a745;
+            padding: 20px 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+            width: 300px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>夥伴系統登入</h1>
+        {{#error}}
+            <p class="error-message">{{error}}</p>
+        {{/error}}
+        
+        <form action="/partner/login" method="POST">
+            <div class="form-group">
+                <label for="username">夥伴帳號 (統一編號)</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密碼</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">登 入</button>
+        </form>
+
+        <p style="text-align: center; margin-top: 15px;">
+            <a href="/register">▶ 忘記密碼或註冊新帳號</a>
+        </p>
+    </div>
+</body>
+</html>

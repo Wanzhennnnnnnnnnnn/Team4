@@ -1,0 +1,67 @@
+USE assignment_db;
+
+-- 1. 清空並重建供應商目錄 (SupplierMaterial)
+TRUNCATE TABLE SupplierMaterial;
+
+-- 邏輯：如果公司在 final_transactions 中出現過 (作為 company_id)，
+-- 且該公司被我們分類為 'Supplier'，則將該交易中的 material_id 加入其目錄。
+-- 價格使用交易中的單價 (price_per_unit)。
+INSERT IGNORE INTO SupplierMaterial (SupplierID, MaterialID, PricePerUnit, AvailableStock)
+SELECT DISTINCT
+    FT.company_id AS SupplierID,
+    FT.material_id AS MaterialID,
+    FT.price_per_unit AS PricePerUnit,
+    FLOOR(RAND() * 1000) + 50 AS AvailableStock
+FROM final_transactions FT
+JOIN Suppliers S ON FT.company_id = S.SupplierID;
+
+-- [補底]: 對於那些沒有交易紀錄的供應商，隨機分配一些材料，以免頁面空白
+INSERT IGNORE INTO SupplierMaterial (SupplierID, MaterialID, PricePerUnit, AvailableStock)
+SELECT 
+    S.SupplierID, 
+    M.MaterialID,
+    FM.PriceAvg,
+    FLOOR(RAND() * 500) + 50
+FROM Suppliers S
+CROSS JOIN Materials M 
+JOIN final_materials FM ON M.MaterialID = FM.material_id
+WHERE 
+    S.SupplierID NOT IN (SELECT DISTINCT SupplierID FROM SupplierMaterial)
+    AND RAND() < 0.05;
+
+
+-- 2. 重建歷史訂單 (PurchaseOrder & POItems)
+-- 這次我們將 company_id 視為 供應商 (Supplier)
+
+-- 先清空訂單表
+DELETE FROM POItems;
+DELETE FROM PurchaseOrder;
+
+-- 建立訂單主表
+-- 買方 (Contractor)：指派給您測試用的承包商帳號 (ID=1, '大通營造')
+-- 賣方 (Supplier)：來自 final_transactions.company_id
+INSERT INTO PurchaseOrder (ContractorID, SupplierID, OrderDate, Status, TotalAmount)
+SELECT 
+    1, -- 強制指派給測試承包商 (ID=1)
+    FT.company_id, -- 賣方 (供應商)
+    FT.transaction_date,
+    'Completed',
+    FT.total_price
+FROM final_transactions FT
+JOIN Suppliers S ON FT.company_id = S.SupplierID -- 確保賣方存在於 Suppliers 表
+LIMIT 5000; -- 限制筆數
+
+-- 建立訂單細項
+-- 連結剛建立的 PO
+INSERT INTO POItems (POID, MaterialID, Quantity, UnitPrice)
+SELECT 
+    PO.POID,
+    FT.material_id,
+    FT.quantity,
+    FT.price_per_unit
+FROM final_transactions FT
+JOIN PurchaseOrder PO 
+    ON PO.SupplierID = FT.company_id 
+    AND PO.TotalAmount = FT.total_price 
+    AND PO.OrderDate = FT.transaction_date
+LIMIT 5000;

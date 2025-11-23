@@ -1,0 +1,13 @@
+--- 創建 mysql - BuildLink 
+docker run -it --name BuildLink -p 8080:80 -v "C:\Users\417\Desktop\營建資訊系統之軟體工程\Team4\BuildLink:/app" node bash
+docker start BuildLink
+docker exec -it BuildLink bash
+cd /app
+nodemon -L app.js
+
+--- 將mysql及DB都連到同一個net中
+docker network create buildlink-net
+docker network connect buildlink-net assignment_wan
+docker network connect buildlink-net BuildLink
+
+
