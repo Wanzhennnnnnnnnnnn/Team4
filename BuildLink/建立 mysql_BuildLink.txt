@@ -3,6 +3,8 @@ docker run -it --name BuildLink -p 8080:80 -v "C:\Users\417\Desktop\營建資訊
 docker start BuildLink
 docker exec -it BuildLink bash
 cd /app
+npm install express
+npm install mysql
 nodemon -L app.js
 
 --- 將mysql及DB都連到同一個net中
