@@ -34,7 +34,7 @@ graph TD
     Dashboard --> ActiveOrders("Active orders<br/>(Wan.Zhen.HSU)"):::exp
     Dashboard --> ActiveProjects("Active projects<br/>(Wan.Zhen.HSU)"):::exp
     Dashboard --> RecentOrder("Recent Orders<br/>(Wan.Zhen.HSU)"):::exp
-    Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp
+    Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp_missing
 
     %% History Procurement Branch
     TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp
