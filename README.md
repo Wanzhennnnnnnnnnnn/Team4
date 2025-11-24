@@ -1,69 +1,100 @@
 # Team4
 ```mermaid
-flowchart TD
-    Root[BuildLink<br>承包商 B2B 採購平台]
+graph TD
+    %% 定義樣式類別
+    classDef mvp fill:#d4edda,stroke:#155724,stroke-width:2px,color:#155724;
+    classDef exp fill:#cce5ff,stroke:#004085,stroke-width:2px,color:#004085;
+    classDef root fill:#f8f9fa,stroke:#343a40,stroke-width:2px;
+    classDef action fill:#fff3cd,stroke:#856404,stroke-width:2px,stroke-dasharray: 5 5;
+    
+    %% 定義「缺失/需修改」的樣式 (紅色框)
+    classDef mvp_missing fill:#d4edda,stroke:#ff0000,stroke-width:4px,stroke-dasharray: 5 5,color:#d00000;
+    classDef exp_missing fill:#cce5ff,stroke:#ff0000,stroke-width:4px,stroke-dasharray: 5 5,color:#d00000;
 
-    %% --- Shing.Rong.LEE (系統入口與身份驗證) ---
-    Root --> Sys("系統核心與入口<br><b>Shing.Rong.LEE</b>")
-    Sys --> Auth("身份驗證 (Auth)")
-    Auth --> Login("登入系統 (Contractor Login)")
-    Auth --> Reg("註冊系統 (Registration)")
-    Auth --> Forgot("忘記密碼 (Forgot Password)")
-    
-    Sys --> UserMgmt("使用者管理 (User Mgmt)")
-    UserMgmt --> Profile("個人資訊修改 (Edit Profile)<br><span style='color:#2980b9'>[未來功能]</span>")
-    
-    %% --- Wan.Zhen.HSU (核心業務流程 - 已完成) ---
-    Root --> Flow("核心業務流程<br><b>Wan.Zhen.HSU</b>")
-    Flow --> Dash("儀表板 (Dashboard)")
-    Dash --> DashStats("採購數據概覽")
-    
-    Flow --> Proj("專案管理 (Project Mgmt)")
-    Proj --> ProjList("專案列表")
-    Proj --> ProjAdd("新增專案")
-    
-    Flow --> Order("訂單與採購 (Procurement)")
-    Order --> Cart("購物車與下單")
-    Order --> Hist("歷史訂單查詢")
-    
-    Flow --> SupMkt("供應商市集 (Marketplace)")
-    SupMkt --> SupList("供應商搜尋與列表")
-    SupMkt --> SupDetail("供應商詳情與目錄")
+    %% Auth Branch (Completed)
+    Root[Build Link]:::root --> Login("Login<br/>(Shing.Rong.Lee)"):::mvp
+    Root[Build Link]:::root --> Register("Register<br/>(Shing.Rong.Lee)"):::mvp
+    Root[Build Link]:::root --> ForgetPW("Forget Password<br/>(Shing.Rong.Lee)"):::mvp
 
-    %% --- Zhafran (加值與擴充功能 - 未來開發) ---
-    Root --> Ext("加值與擴充功能<br><b>Zhafran</b>")
-    Ext --> Rating("評價系統 (Rating System)")
-    Rating --> RateOrder("訂單完成後評分")
-    Rating --> RateView("查看供應商評價")
-    
-    Ext --> Fin("財務管理 (Finance)")
-    Fin --> Invoice("發票系統 (Invoice Mgmt)")
-    Fin --> Payment("付款狀態追蹤")
-    
-    Ext --> Adv("進階功能 (Advanced)")
-    Adv --> Notify("通知中心 (Notifications)")
-    Adv --> Report("進階報表 (Advanced Reports)")
+    %% Login Downstream
+    Login --> EditProfile("Edit Profile<br/>(Shing.Rong.Lee)"):::exp_missing
+    Login --> Dashboard("Dashboard<br/>(Wan.Zhen.HSU)"):::mvp
+    Login --> Projects("Projects<br/>(Wan.Zhen.HSU)"):::mvp
 
-    %% --- 跨模組連接 ---
-    Login --> Dash
-    Dash --> Proj
-    Proj -.->|關聯採購| Order
-    SupList --> SupDetail
-    SupDetail --> Cart
-    Cart --> Order
-    Order -.->|完成後| RateOrder
-    Order -.->|開立| Invoice
+    %% --- 分流入口 ---
+    Login --> Suppliers("Suppliers<br/>(Wan.Zhen.HSU)"):::mvp
+    Login --> Materials("Materials<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    Login --> TransHistory("Transaction History<br/>(Wan.Zhen.HSU)"):::exp
 
-    %% --- 顏色定義 ---
-    %% 核心已完成 (綠色)
-    classDef core fill:#81C59E,stroke:#27ae60,stroke-width:2px;
-    %% 未來開發 (藍色)
-    classDef future fill:#AED6F1,stroke:#2980b9,stroke-width:2px,stroke-dasharray: 5 5;
-    %% 基礎架構 (灰色)
-    classDef infra fill:#F0F3F4,stroke:#95A5A6,stroke-width:2px;
+    %% 新增：通知中心
+    Login --> Notifications("Notification Center<br/>(Shing.Rong.Lee)"):::exp_missing
 
-    %% --- 應用顏色 ---
-    class Auth,Login,Reg,Forgot,Dash,DashStats,Proj,ProjList,ProjAdd,Order,Cart,Hist,SupMkt,SupList,SupDetail core
-    class Profile,Rating,RateOrder,RateView,Fin,Invoice,Payment,Adv,Notify,Report future
-    class Root,Sys,Flow,Ext,UserMgmt infra
+    %% Dashboard Branch (Completed)
+    Dashboard --> TotalSpend("Total Project Spend<br/>(Wan.Zhen.HSU)"):::exp
+    Dashboard --> ActiveOrders("Active orders<br/>(Wan.Zhen.HSU)"):::exp
+    Dashboard --> ActiveProjects("Active projects<br/>(Wan.Zhen.HSU)"):::exp
+    Dashboard --> RecentOrder("Recent Orders<br/>(Wan.Zhen.HSU)"):::exp
+    Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp
+
+    %% History Procurement Branch
+    TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp
+    OrderDetail -.-> Invoice
+
+    %% Projects Branch
+    Projects --> ManageProject("Manage Project<br/>(Wan.Zhen.HSU)"):::mvp
+    Projects --> AddProject("Add Project<br/>(Wan.Zhen.HSU)"):::mvp
+
+    ManageProject --> WorkItem("Work Item<br/>(Zhafran)"):::mvp_missing
+
+    %% 專案細節流程 (需新增邏輯)
+    WorkItem --> ItemStatus("Item Status<br/>(Zhafran)"):::exp_missing
+    WorkItem --> ItemMaterial("Item Material<br/>(Zhafran)"):::mvp_missing
+    ItemMaterial --> MaterialStatus("Material Status<br/>(Zhafran)"):::exp_missing
+
+    %% 專案需求 -> 找供應商
+    WorkItem -- "Need Sourcing" --> PurchaseOrderReq("Purchase Request<br/>(Wan.Zhen.HSU)"):::mvp
+    PurchaseOrderReq --> Suppliers
+
+    %% --- 核心修改：搜尋與目錄邏輯分流 ---
+
+    %% Path A: Suppliers (Suppliers.hjs 已有，但缺少功能)
+    Suppliers --> SupSearch("Search Suppliers<br/>(List View)<br/>(Wan.Zhen.HSU)"):::mvp
+    SupSearch --> Message("Message Supplier<br/>(Zhafran)"):::exp_missing
+
+    SupSearch -- "Click Supplier" --> SupDetail("Supplier Detail Page<br/>(Info + Material List)<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    SupDetail --> Material("Select Material & Qty<br/>(Wan.Zhen.HSU)"):::mvp_missing
+
+    %% Path B: Materials (完全缺失)
+    Materials --> MatSearch("Search Materials<br/>(Keyword/Category)<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    MatSearch -- "Click Item" --> MatDetail("Material Detail<br/>(Info + Supplier Card)<br/>(Wan.Zhen.HSU)"):::mvp_missing
+
+    %% Materials 路徑的連結
+    MatDetail --> Material
+    MatDetail -. "View Supplier Info" .-> SupDetail
+
+    %% 收藏功能 (缺失)
+    SupDetail -- "Save Supplier" --> Wishlist("Wishlist/Favorites<br/>(Zhafran)"):::exp_missing
+    MatDetail -- "Save Material" --> Wishlist
+
+    %% Order Configuration (缺失)
+    Material --> OrderConfig("Order Configuration<br/>(Wan.Zhen.HSU)"):::mvp_missing
+
+    %% Order & Logistics Flow
+    OrderConfig --> Cart("購物車 & Order<br/>(Wan.Zhen.HSU)"):::mvp_missing
+
+    %% 結帳流程 (缺失)
+    Cart --> Checkout("Checkout/Confirm<br/>(Wan.Zhen.HSU)"):::exp_missing
+
+    Checkout --> Logistics("物流 Status<br/>(Zhafran)"):::exp_missing
+
+    Logistics --> Rating("Rating<br/>(Zhafran)"):::exp_missing
+
+    %% 售後 (缺失)
+    Logistics --> ReturnDispute("Return/Dispute<br/>(Zhafran)"):::exp_missing
+
+    %% Invoice (缺失)
+    Logistics -.-> Invoice("Invoice<br/>(Zhafran)"):::exp_missing
+
+    %% 閉環回饋
+    Logistics -.Status Update.-> ItemStatus
    ```
