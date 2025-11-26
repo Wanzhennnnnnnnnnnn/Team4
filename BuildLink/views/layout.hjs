@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{title}} | BuildLink</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -18,7 +15,6 @@
 
     <div class="flex h-screen overflow-hidden">
         
-        <!-- Sidebar -->
         <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
             <div class="p-6 border-b border-slate-800">
                 <div class="flex items-center gap-2 text-white mb-1">
@@ -47,7 +43,7 @@
                     <i data-lucide="package" class="w-5 h-5"></i>
                     <span class="font-medium">Material Orders</span>
                 </a>
-            </nav>
+                </nav>
 
             <div class="p-4 border-t border-slate-800">
                 <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-white transition-colors">
@@ -57,31 +53,39 @@
             </div>
         </aside>
 
-        <!-- Main Content Wrapper -->
         <div class="flex-1 flex flex-col h-screen overflow-hidden">
             
-            <!-- Navbar -->
             <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-8 sticky top-0 z-20">
                 <div class="flex items-center gap-4 md:hidden">
                     <span class="font-bold text-lg">BuildLink</span>
                 </div>
                 <div class="hidden md:block text-sm breadcrumbs text-slate-500">
-                    <!-- Breadcrumbs placeholder -->
                     Portal / {{title}}
                 </div>
                 
                 <div class="flex items-center gap-4">
+                    
+                    <a href="/contractor/notifications" class="relative p-2 text-slate-500 hover:text-blue-600 transition-colors mr-2">
+                        <i data-lucide="bell" class="w-6 h-6"></i>
+                        {{#notificationCount}}
+                        <span class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-sm">
+                            {{notificationCount}}
+                        </span>
+                        {{/notificationCount}}
+                    </a>
+
                     <div class="text-right hidden sm:block">
                         <div class="text-sm font-medium text-slate-800">{{contractorName}}</div>
-                        <div class="text-xs text-slate-500">Project Manager</div>
+                        <div class="text-xs text-slate-500">Contractor</div>
                     </div>
-                    <div class="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 text-slate-500">
+                    
+                    <a href="/contractor/profile" class="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all cursor-pointer" title="Edit Profile">
                         <i data-lucide="user" class="w-5 h-5"></i>
-                    </div>
+                    </a>
+
                 </div>
             </header>
 
-            <!-- Content Area -->
             <main class="flex-1 overflow-auto p-8 bg-slate-50">
                 <div class="max-w-7xl mx-auto">
                     {{{ content }}}
