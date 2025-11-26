@@ -37,7 +37,7 @@ graph TD
     Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp_missing
 
     %% History Procurement Branch
-    TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp
+    TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp_missing
     OrderDetail -.-> Invoice
 
     %% Projects Branch
