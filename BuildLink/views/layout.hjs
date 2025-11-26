@@ -43,9 +43,13 @@
                     <i data-lucide="users" class="w-5 h-5"></i>
                     <span class="font-medium">Suppliers</span>
                 </a>
-                <a href="/contractor/orders" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{#isOrders}}bg-blue-600 text-white{{/isOrders}} {{^isOrders}}hover:bg-slate-800 hover:text-white{{/isOrders}}">
+                <a href="/contractor/materials" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{#isMaterials}}bg-blue-600 text-white{{/isMaterials}} {{^isMaterials}}hover:bg-slate-800 hover:text-white{{/isMaterials}}">
                     <i data-lucide="package" class="w-5 h-5"></i>
-                    <span class="font-medium">Material Orders</span>
+                    <span class="font-medium">Materials</span>
+                </a>
+                <a href="/contractor/transactions" class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{#isTransactions}}bg-blue-600 text-white{{/isTransactions}} {{^isTransactions}}hover:bg-slate-800 hover:text-white{{/isTransactions}}">
+                    <i data-lucide="arrow-right-left" class="w-5 h-5"></i>
+                    <span class="font-medium">Transactions</span>
                 </a>
             </nav>
 
