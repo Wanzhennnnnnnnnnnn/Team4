@@ -1,0 +1,45 @@
+<div class="max-w-4xl mx-auto pb-24">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-slate-800">Notifications</h2>
+        
+        <form action="/contractor/notifications/mark-all-read" method="POST">
+            <button type="submit" class="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors">
+                Mark all as read
+            </button>
+        </form>
+    </div>
+
+    <div class="space-y-4">
+        {{#notifications}}
+        <a href="/contractor/notifications/read/{{NotificationID}}" 
+           class="block bg-white p-5 rounded-xl border transition-all hover:shadow-md flex items-start gap-4 
+                  {{^IsRead}}border-blue-200 bg-blue-50/30{{/IsRead}} {{#IsRead}}border-slate-200{{/IsRead}}">
+            
+            <div class="p-3 rounded-full flex-shrink-0 {{^IsRead}}bg-blue-100 text-blue-600{{/IsRead}} {{#IsRead}}bg-slate-100 text-slate-400{{/IsRead}}">
+                <i data-lucide="{{^IsRead}}bell-ring{{/IsRead}}{{#IsRead}}bell{{/IsRead}}" class="w-6 h-6"></i>
+            </div>
+
+            <div class="flex-1">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-slate-800 {{^IsRead}}text-blue-700{{/IsRead}}">
+                        {{Title}}
+                        {{^IsRead}}<span class="ml-2 inline-block w-2 h-2 bg-blue-600 rounded-full"></span>{{/IsRead}}
+                    </h3>
+                    <span class="text-xs text-slate-400 whitespace-nowrap ml-4">{{Time}}</span>
+                </div>
+                <p class="text-slate-600 text-sm mt-1">{{Message}}</p>
+            </div>
+        </a>
+        {{/notifications}}
+
+        {{^notifications}}
+        <div class="text-center py-16 bg-white rounded-xl border border-dashed border-slate-200">
+            <div class="inline-flex p-4 rounded-full bg-slate-50 text-slate-300 mb-3">
+                <i data-lucide="bell-off" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-medium text-slate-900">No notifications</h3>
+            <p class="text-slate-500 mt-1">You're all caught up! Check back later for updates.</p>
+        </div>
+        {{/notifications}}
+    </div>
+</div>

@@ -4,21 +4,35 @@ const mysql = require('mysql2/promise');
 const config = require('../config');
 const pool = mysql.createPool(config.db);
 
-// Helper: 兩階段渲染 (包含抓取承包商個人資料)
+// ====================================================
+// Helper: 兩階段渲染 (包含抓取承包商資料 & 未讀通知數)
+// ====================================================
 const renderWithLayout = async (req, res, viewName, data) => {
     try {
-        // 1. 抓取當前登入的 Contractor 資料 (給 Layout 右上角用)
         const contractorId = req.signedCookies.userId;
-        let currentUser = { Name: 'Contractor', Email: '', Address: '' };
-        
+        let currentUser = { Name: 'Contractor', Email: '', Address: '', PhoneNumber: '' };
+        let unreadCount = 0;
+
         if (contractorId) {
+            // 1. 抓取當前使用者資料
             const [users] = await pool.execute('SELECT * FROM Contractors WHERE ContractorID = ?', [contractorId]);
             if (users.length > 0) {
                 currentUser = users[0];
             }
+
+            // 2. ★★★ 抓取未讀通知數量 (給 Navbar 紅點用) ★★★
+            try {
+                const [notifResult] = await pool.execute(
+                    'SELECT COUNT(*) as count FROM Notifications WHERE ContractorID = ? AND IsRead = 0', 
+                    [contractorId]
+                );
+                unreadCount = notifResult[0].count;
+            } catch (e) {
+                console.warn("Notifications table query failed (Table might not exist yet).");
+            }
         }
 
-        // 2. 處理 View 路徑
+        // 3. 處理 View 路徑
         let viewPath = viewName;
         if (!viewName.includes('/')) {
             viewPath = `contractor/${viewName}`;
@@ -27,19 +41,22 @@ const renderWithLayout = async (req, res, viewName, data) => {
             viewPath += '.hjs';
         }
 
-        // 3. 渲染內容
+        // 4. 渲染內容
         res.render(viewPath, data, (err, html) => {
             if (err) {
                 console.error(`Error rendering view ${viewPath}:`, err);
                 return res.status(500).send(`Template Error: ${err.message}`);
             }
             
-            // 4. 渲染 Layout，並傳入 Contractor 的資料
+            // 5. 渲染 Layout，並傳入 Contractor 的資料與通知數量
             res.render('layout.hjs', { 
                 ...data,
                 content: html,
                 contractorName: currentUser.Name,
                 contractorEmail: currentUser.Email, 
+                contractorPhone: currentUser.PhoneNumber, 
+                contractorAddress: currentUser.Address,
+                notificationCount: unreadCount, // ★★★ 傳入未讀數量給 Layout
                 [`is${viewName.replace('contractor/', '').charAt(0).toUpperCase() + viewName.replace('contractor/', '').slice(1)}`]: true 
             });
         });
@@ -118,7 +135,6 @@ router.get('/suppliers', async (req, res) => {
         let sql = 'SELECT * FROM Suppliers';
         let params = [];
 
-        // ★★★ 搜尋邏輯 ★★★
         if (searchQuery) {
             if (searchType === 'material') {
                 sql = `
@@ -250,7 +266,6 @@ router.get('/projects/:id/create-po', async (req, res) => {
         let sql = 'SELECT * FROM Suppliers';
         let params = [];
 
-        // ★★★ 搜尋邏輯 (與 Suppliers 列表相同) ★★★
         if (searchQuery) {
             if (searchType === 'material') {
                 sql = `
@@ -280,7 +295,6 @@ router.get('/projects/:id/create-po', async (req, res) => {
             title: 'Select Supplier',
             project: projectRows[0],
             suppliers: suppliersFixed,
-            // 傳遞搜尋狀態
             searchQuery,
             searchType: searchType === 'material' ? 'Material' : 'Supplier Name',
             isTypeSupplier: searchType === 'supplier',
@@ -293,14 +307,13 @@ router.get('/projects/:id/create-po', async (req, res) => {
 });
 
 // ==========================================
-// 7. Supplier Details & Shopping Page
+// 6. Supplier Details & Shopping Page
 // ==========================================
 router.get('/supplier/:id', async (req, res) => {
     try {
         const supplierId = req.params.id;
         const contractorId = req.signedCookies.userId;
         
-        // 抓取網址參數中的 projectId
         const preSelectedProjectId = req.query.projectId; 
 
         // 1. 獲取供應商詳細資料
@@ -327,17 +340,14 @@ router.get('/supplier/:id', async (req, res) => {
             [contractorId]
         );
 
-        // 處理預設選中專案
         const projectsWithSelection = projects.map(p => ({
             ...p,
             isSelected: (p.ProjectID == preSelectedProjectId)
         }));
 
-        // 準備資料給前端
         const supplierData = {
-            ...supplier, // 這會包含 Address, Email, PhoneNumber 等原始欄位
+            ...supplier,
             CompanyName: supplier.SupplierName || supplier.Name, 
-            // ★★★ 確保電話和 Email 有預設值 ★★★
             PhoneNumber: supplier.PhoneNumber || 'N/A',
             Email: supplier.Email || 'N/A',
             items: materials.map(m => ({
@@ -362,7 +372,9 @@ router.get('/supplier/:id', async (req, res) => {
     }
 });
 
-// 處理訂單送出 (POST)
+// ==========================================
+// 7. 處理訂單送出 (POST) + 自動發送通知
+// ==========================================
 router.post('/supplier/:id/create-order', async (req, res) => {
     const conn = await pool.getConnection();
     try {
@@ -380,18 +392,31 @@ router.post('/supplier/:id/create-order', async (req, res) => {
 
         const totalAmount = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
+        // 1. 建立 PurchaseOrder
         const [poResult] = await conn.execute(
             'INSERT INTO PurchaseOrder (ContractorID, ProjectID, SupplierID, TotalAmount, Status, OrderDate) VALUES (?, ?, ?, ?, ?, NOW())',
             [contractorId, project_id, supplierId, totalAmount, 'Pending']
         );
         const poId = poResult.insertId;
 
+        // 2. 建立 POItems
         for (const item of items) {
             await conn.execute(
                 'INSERT INTO POItems (POID, MaterialID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)',
                 [poId, item.id, item.qty, item.price]
             );
         }
+
+        // 3. ★★★ 觸發點：交易完成，發送通知 ★★★
+        await conn.execute(
+            'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+            [
+                contractorId, 
+                'Order Created Successfully', 
+                `Order #${poId} for project has been placed. Total: $${totalAmount.toLocaleString()}`,
+                `/contractor/projects/${project_id}`
+            ]
+        );
 
         await conn.commit();
         res.redirect(`/contractor/projects/${project_id}`); 
@@ -412,9 +437,6 @@ router.get('/orders', async (req, res) => {
     try {
         const contractorId = req.signedCookies.userId;
         
-        // ★★★ 修正重點：過濾掉舊的歷史訂單 ★★★
-        // 舊的 CSV 匯入資料通常沒有 ProjectID (為 NULL)
-        // 我們透過 JOIN Projects (Inner Join) 來只選取「有專案連結」的訂單，也就是您 App 內新增的訂單
         const sql = `
             SELECT PO.*, S.SupplierName as SupplierName, P.ProjectName
             FROM PurchaseOrder PO
@@ -449,6 +471,127 @@ router.get('/orders', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.redirect('/contractor/dashboard');
+    }
+});
+
+// ==========================================
+// 9. Notifications Center (通知列表)
+// ==========================================
+router.get('/notifications', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        
+        // 獲取所有通知，最新的在上面
+        const [notifications] = await pool.execute(
+            'SELECT * FROM Notifications WHERE ContractorID = ? ORDER BY CreatedAt DESC', 
+            [contractorId]
+        );
+
+        // 格式化日期
+        const formattedNotifications = notifications.map(n => ({
+            ...n,
+            Time: n.CreatedAt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        }));
+
+        await renderWithLayout(req, res, 'notifications', {
+            title: 'Notifications',
+            notifications: formattedNotifications
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/dashboard');
+    }
+});
+
+// 點擊單則通知 (標記已讀並跳轉)
+router.get('/notifications/read/:id', async (req, res) => {
+    try {
+        const notificationId = req.params.id;
+        const contractorId = req.signedCookies.userId;
+
+        // 1. 獲取該通知的 Link
+        const [rows] = await pool.execute('SELECT Link FROM Notifications WHERE NotificationID = ? AND ContractorID = ?', [notificationId, contractorId]);
+        
+        // 2. 標記為已讀
+        await pool.execute('UPDATE Notifications SET IsRead = 1 WHERE NotificationID = ?', [notificationId]);
+
+        // 3. 跳轉
+        if (rows.length > 0 && rows[0].Link) {
+            res.redirect(rows[0].Link);
+        } else {
+            res.redirect('/contractor/notifications');
+        }
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/notifications');
+    }
+});
+
+// 標記全部已讀
+router.post('/notifications/mark-all-read', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        await pool.execute('UPDATE Notifications SET IsRead = 1 WHERE ContractorID = ?', [contractorId]);
+        res.redirect('/contractor/notifications');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/notifications');
+    }
+});
+
+// ==========================================
+// 10. Edit Profile (編輯個人資料)
+// ==========================================
+router.get('/profile', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const [users] = await pool.execute('SELECT * FROM Contractors WHERE ContractorID = ?', [contractorId]);
+        
+        await renderWithLayout(req, res, 'profile', {
+            title: 'Edit Profile',
+            user: users[0],
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/dashboard');
+    }
+});
+
+router.post('/profile/update', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const { name, phone, address, password, confirm_password } = req.body;
+
+        // 驗證密碼 (如果有填寫)
+        if (password && password !== confirm_password) {
+            return res.redirect('/contractor/profile?error=Passwords do not match');
+        }
+
+        let sql = 'UPDATE Contractors SET Name = ?, PhoneNumber = ?, Address = ?';
+        let params = [name, phone, address];
+
+        // 如果使用者有輸入新密碼才更新密碼
+        if (password) {
+            sql += ', Password = ?';
+            params.push(password);
+        }
+
+        sql += ' WHERE ContractorID = ?';
+        params.push(contractorId);
+
+        await pool.execute(sql, params);
+
+        // 更新 Cookie 中的名稱
+        res.cookie('username', name, { signed: true });
+
+        res.redirect('/contractor/profile?success=Profile updated successfully');
+
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/profile?error=Update failed');
     }
 });
 
