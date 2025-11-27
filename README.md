@@ -49,7 +49,7 @@ graph TD
     %% 專案細節流程
     WorkItem --> ItemStatus("Item Status<br/>(Wan.Zhen.HSU)"):::exp
     WorkItem --> ItemMaterial("Item Material<br/>(Wan.Zhen.HSU)"):::mvp
-    ItemMaterial --> MaterialStatus("Material Status<br/>(Wan.Zhen.HSU)"):::exp
+    ItemMaterial --> MaterialStatus("Material Status<br/>(Shing.Rong.Lee)"):::exp_missing
 
     %% 專案需求 -> 找供應商
     WorkItem -- "Need Sourcing" --> PurchaseOrderReq("Purchase Request<br/>(Wan.Zhen.HSU)"):::mvp
