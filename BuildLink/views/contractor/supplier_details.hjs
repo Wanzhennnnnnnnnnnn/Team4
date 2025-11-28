@@ -62,6 +62,17 @@
                     <input type="date" name="delivery_date" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                 </div>
             </div>
+
+            {{#workItem}}
+            <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+                    <span class="font-medium text-blue-800">Purchasing for Work Item</span>
+                </div>
+                <p class="text-sm text-blue-700">{{WorkItemName}} ({{WorkItemType}})</p>
+                <input type="hidden" name="workItemId" value="{{WorkItemID}}">
+            </div>
+            {{/workItem}}
         </div>
 
         <!-- 3. 材料清單 -->

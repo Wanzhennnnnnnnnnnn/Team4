@@ -1,8 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql2/promise'); 
+const mysql = require('mysql2/promise');
 const config = require('../config');
 const pool = mysql.createPool(config.db);
+
+// Helper function for type-safe contractor ownership verification
+function verifyContractorOwnership(dbContractorId, cookieContractorId) {
+    // Convert both to integers for comparison
+    const dbId = parseInt(dbContractorId, 10);
+    const cookieId = parseInt(cookieContractorId, 10);
+    return dbId === cookieId;
+}
 
 // Helper: 兩階段渲染 (包含抓取承包商個人資料)
 const renderWithLayout = async (req, res, viewName, data) => {
@@ -203,7 +211,7 @@ router.post('/projects/add', async (req, res) => {
 router.get('/projects/:id', async (req, res) => {
     try {
         const projectId = req.params.id;
-        
+
         const [projectRows] = await pool.execute('SELECT * FROM Projects WHERE ProjectID = ?', [projectId]);
         const project = projectRows[0];
 
@@ -214,9 +222,33 @@ router.get('/projects/:id', async (req, res) => {
             WHERE PO.ProjectID = ?
         `, [projectId]);
 
+        // Get work items for this project
+        const [workItems] = await pool.execute(`
+            SELECT
+                WI.*,
+                COUNT(DISTINCT WIM.WorkItemMaterialID) as MaterialCount,
+                SUM(CASE WHEN WIM.Status = 'Delivered' THEN 1 ELSE 0 END) as DeliveredMaterialCount
+            FROM WorkItems WI
+            LEFT JOIN WorkItemMaterials WIM ON WI.WorkItemID = WIM.WorkItemID
+            WHERE WI.ProjectID = ?
+            GROUP BY WI.WorkItemID
+            ORDER BY WI.CreatedAt DESC
+        `, [projectId]);
+
+        // Process work items to add status classes and format data
+        const processedWorkItems = workItems.map(wi => ({
+            ...wi,
+            statusClass: getStatusClass(wi.Status),
+            EstimatedCost: wi.EstimatedCost != null && !isNaN(parseFloat(wi.EstimatedCost))
+                ? parseFloat(wi.EstimatedCost).toFixed(2)
+                : null,
+            MaterialCount: wi.MaterialCount || 0,
+            DeliveredMaterialCount: wi.DeliveredMaterialCount || 0
+        }));
+
         const ordersWithItems = orders.map(o => ({
             ...o,
-            DeliveryDate: '2024-12-01', 
+            DeliveryDate: '2024-12-01',
             Items: [
                 { Material: 'Steel Beams', Quantity: 50, Price: 5000 },
                 { Material: 'Cement Bags', Quantity: 200, Price: 1500 }
@@ -227,6 +259,7 @@ router.get('/projects/:id', async (req, res) => {
         await renderWithLayout(req, res, 'project_details', {
             title: project.ProjectName,
             project,
+            workItems: processedWorkItems,
             orders: ordersWithItems
         });
     } catch (err) {
@@ -299,9 +332,10 @@ router.get('/supplier/:id', async (req, res) => {
     try {
         const supplierId = req.params.id;
         const contractorId = req.signedCookies.userId;
-        
-        // 抓取網址參數中的 projectId
-        const preSelectedProjectId = req.query.projectId; 
+
+        // 抓取網址參數中的 projectId 和 workItemId
+        const preSelectedProjectId = req.query.projectId;
+        const workItemId = req.query.workItemId;
 
         // 1. 獲取供應商詳細資料
         const [supplierRows] = await pool.execute('SELECT * FROM Suppliers WHERE SupplierID = ?', [supplierId]);
@@ -321,22 +355,40 @@ router.get('/supplier/:id', async (req, res) => {
             WHERE SM.SupplierID = ?
         `, [supplierId]);
 
-        // 3. 獲取承包商的進行中專案
+        // 3. Get work item details if workItemId present
+        let workItem = null;
+        let requiredMaterialIds = [];
+
+        if (workItemId) {
+            const [workItemRows] = await pool.execute(
+                'SELECT * FROM WorkItems WHERE WorkItemID = ?',
+                [workItemId]
+            );
+            workItem = workItemRows[0];
+
+            const [workItemMaterials] = await pool.execute(
+                'SELECT MaterialID, RequiredQuantity FROM WorkItemMaterials WHERE WorkItemID = ?',
+                [workItemId]
+            );
+            requiredMaterialIds = workItemMaterials.map(m => m.MaterialID);
+        }
+
+        // 4. 獲取承包商的進行中專案
         const [projects] = await pool.execute(
-            'SELECT ProjectID, ProjectName FROM Projects WHERE ContractorID = ? AND Status != "Completed"', 
+            'SELECT ProjectID, ProjectName FROM Projects WHERE ContractorID = ? AND Status != "Completed"',
             [contractorId]
         );
 
-        // 處理預設選中專案
+        // 處理預設選中專案 - if workItem exists, use its ProjectID
         const projectsWithSelection = projects.map(p => ({
             ...p,
-            isSelected: (p.ProjectID == preSelectedProjectId)
+            isSelected: (p.ProjectID == preSelectedProjectId) || (workItem && p.ProjectID == workItem.ProjectID)
         }));
 
         // 準備資料給前端
         const supplierData = {
             ...supplier, // 這會包含 Address, Email, PhoneNumber 等原始欄位
-            CompanyName: supplier.SupplierName || supplier.Name, 
+            CompanyName: supplier.SupplierName || supplier.Name,
             // ★★★ 確保電話和 Email 有預設值 ★★★
             PhoneNumber: supplier.PhoneNumber || 'N/A',
             Email: supplier.Email || 'N/A',
@@ -346,14 +398,16 @@ router.get('/supplier/:id', async (req, res) => {
                 category: m.CategoryName || 'General',
                 unit: m.UnitName || 'unit',
                 price: m.PricePerUnit,
-                stock: m.AvailableStock
+                stock: m.AvailableStock,
+                isRequired: requiredMaterialIds.includes(m.MaterialID) // Mark required materials
             }))
         };
 
         await renderWithLayout(req, res, 'supplier_details', {
             title: `Purchase from ${supplierData.CompanyName}`,
             supplier: supplierData,
-            projects: projectsWithSelection
+            projects: projectsWithSelection,
+            workItem // Add work item to template data
         });
 
     } catch (err) {
@@ -370,31 +424,64 @@ router.post('/supplier/:id/create-order', async (req, res) => {
 
         const supplierId = req.params.id;
         const contractorId = req.signedCookies.userId;
-        const { project_id, delivery_date, cart_data } = req.body;
+        const { project_id, delivery_date, cart_data, workItemId } = req.body;
 
         const items = JSON.parse(cart_data);
-        
+
         if (!items || items.length === 0) {
             throw new Error('Cart is empty');
         }
 
         const totalAmount = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
+        // Create PO with optional workItemId
         const [poResult] = await conn.execute(
-            'INSERT INTO PurchaseOrder (ContractorID, ProjectID, SupplierID, TotalAmount, Status, OrderDate) VALUES (?, ?, ?, ?, ?, NOW())',
-            [contractorId, project_id, supplierId, totalAmount, 'Pending']
+            'INSERT INTO PurchaseOrder (ContractorID, ProjectID, SupplierID, WorkItemID, TotalAmount, Status, OrderDate) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+            [contractorId, project_id, supplierId, workItemId || null, totalAmount, 'Pending']
         );
         const poId = poResult.insertId;
 
+        // Create PO items
         for (const item of items) {
             await conn.execute(
                 'INSERT INTO POItems (POID, MaterialID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)',
                 [poId, item.id, item.qty, item.price]
             );
+
+            // Update WorkItemMaterials allocation if workItemId present
+            if (workItemId) {
+                // Check if this material is already tracked for this work item
+                const [existing] = await conn.execute(
+                    'SELECT * FROM WorkItemMaterials WHERE WorkItemID = ? AND MaterialID = ?',
+                    [workItemId, item.id]
+                );
+
+                if (existing.length > 0) {
+                    // Update existing record
+                    await conn.execute(`
+                        UPDATE WorkItemMaterials
+                        SET AllocatedQuantity = AllocatedQuantity + ?,
+                            UnitPrice = ?,
+                            Status = CASE
+                                WHEN AllocatedQuantity + ? >= RequiredQuantity THEN 'Ordered'
+                                ELSE 'Partially_Ordered'
+                            END,
+                            UpdatedAt = NOW()
+                        WHERE WorkItemID = ? AND MaterialID = ?
+                    `, [item.qty, item.price, item.qty, workItemId, item.id]);
+                } else {
+                    // Create new record for this material
+                    await conn.execute(`
+                        INSERT INTO WorkItemMaterials
+                        (WorkItemID, MaterialID, RequiredQuantity, AllocatedQuantity, UnitPrice, Status)
+                        VALUES (?, ?, ?, ?, ?, 'Ordered')
+                    `, [workItemId, item.id, item.qty, item.qty, item.price]);
+                }
+            }
         }
 
         await conn.commit();
-        res.redirect(`/contractor/projects/${project_id}`); 
+        res.redirect(`/contractor/projects/${project_id}`);
 
     } catch (err) {
         await conn.rollback();
@@ -451,5 +538,185 @@ router.get('/orders', async (req, res) => {
         res.redirect('/contractor/dashboard');
     }
 });
+
+// ==========================================
+// 9. Work Item Management
+// ==========================================
+
+// Helper function for status classes
+function getStatusClass(status) {
+    const statusClasses = {
+        'Planning': 'bg-slate-100 text-slate-700',
+        'In Progress': 'bg-blue-100 text-blue-700',
+        'Completed': 'bg-green-100 text-green-700',
+        'On Hold': 'bg-amber-100 text-amber-700'
+    };
+    return statusClasses[status] || 'bg-slate-100 text-slate-700';
+}
+
+// Create Work Item (POST)
+router.post('/projects/:projectId/work-items/add', async (req, res) => {
+    try {
+        const projectId = req.params.projectId;
+        const contractorId = req.signedCookies.userId;
+        const { workItemType, workItemName, description, status, startDate, endDate, estimatedCost } = req.body;
+
+        // Validate project ownership
+        const [projectRows] = await pool.execute(
+            'SELECT * FROM Projects WHERE ProjectID = ? AND ContractorID = ?',
+            [projectId, contractorId]
+        );
+
+        if (projectRows.length === 0) {
+            res.cookie('error', 'Unauthorized access to project', { maxAge: 10000 });
+            return res.redirect('/contractor/projects');
+        }
+
+        // Create work item
+        await pool.execute(
+            `INSERT INTO WorkItems (ProjectID, WorkItemType, WorkItemName, Description, Status, StartDate, EndDate, EstimatedCost)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                projectId,
+                workItemType,
+                workItemName,
+                description || null,
+                status || 'Planning',
+                startDate || null,
+                endDate || null,
+                estimatedCost || null
+            ]
+        );
+
+        res.cookie('success', 'Work item created successfully', { maxAge: 10000 });
+        res.redirect(`/contractor/projects/${projectId}`);
+
+    } catch (err) {
+        console.error('Error creating work item:', err);
+        res.cookie('error', 'Failed to create work item', { maxAge: 10000 });
+        res.redirect('back');
+    }
+});
+
+// View Work Item Details (GET)
+router.get('/work-items/:id', async (req, res) => {
+    try {
+        const workItemId = req.params.id;
+        const contractorId = req.signedCookies.userId;
+
+        // Get work item with project info
+        const [workItemRows] = await pool.execute(
+            `SELECT WI.*, P.ProjectName, P.ContractorID
+             FROM WorkItems WI
+             JOIN Projects P ON WI.ProjectID = P.ProjectID
+             WHERE WI.WorkItemID = ?`,
+            [workItemId]
+        );
+
+        if (workItemRows.length === 0) {
+            return res.redirect('/contractor/projects');
+        }
+
+        const workItem = workItemRows[0];
+
+        // Verify ownership
+        if (!verifyContractorOwnership(workItem.ContractorID, contractorId)) {
+            console.error(`[AUTH] Work Item ${workItemId}: ContractorID mismatch`);
+            return res.status(403).send('Unauthorized');
+        }
+
+        // Get materials for this work item
+        const [materials] = await pool.execute(
+            `SELECT
+                WIM.*,
+                M.MaterialName,
+                U.UnitName,
+                C.CategoryName
+             FROM WorkItemMaterials WIM
+             JOIN Materials M ON WIM.MaterialID = M.MaterialID
+             LEFT JOIN Units U ON M.UnitID = U.UnitID
+             LEFT JOIN Categories C ON M.CategoryID = C.CategoryID
+             WHERE WIM.WorkItemID = ?
+             ORDER BY WIM.CreatedAt DESC`,
+            [workItemId]
+        );
+
+        // Process materials for display
+        const processedMaterials = materials.map(m => ({
+            ...m,
+            fullyAllocated: m.AllocatedQuantity >= m.RequiredQuantity,
+            totalCost: (m.RequiredQuantity * (m.UnitPrice || 0)).toFixed(2),
+            materialStatusClass: getMaterialStatusClass(m.Status)
+        }));
+
+        // Format dates
+        const formattedWorkItem = {
+            ...workItem,
+            StartDate: workItem.StartDate ? workItem.StartDate.toISOString().split('T')[0] : 'Not set',
+            EndDate: workItem.EndDate ? workItem.EndDate.toISOString().split('T')[0] : 'Not set',
+            EstimatedCost: workItem.EstimatedCost ? workItem.EstimatedCost.toFixed(2) : '0.00',
+            ActualCost: workItem.ActualCost ? workItem.ActualCost.toFixed(2) : '0.00'
+        };
+
+        await renderWithLayout(req, res, 'work_item_details', {
+            title: workItem.WorkItemName,
+            workItem: formattedWorkItem,
+            projectName: workItem.ProjectName,
+            materials: processedMaterials,
+            statusClass: getStatusClass(workItem.Status)
+        });
+
+    } catch (err) {
+        console.error('Error fetching work item details:', err);
+        res.redirect('/contractor/projects');
+    }
+});
+
+// Purchase materials for work item (redirects to supplier selection)
+router.get('/work-items/:id/purchase', async (req, res) => {
+    try {
+        const workItemId = req.params.id;
+        const contractorId = req.signedCookies.userId;
+
+        // Get work item and verify ownership
+        const [workItemRows] = await pool.execute(
+            `SELECT WI.*, P.ProjectID, P.ContractorID
+             FROM WorkItems WI
+             JOIN Projects P ON WI.ProjectID = P.ProjectID
+             WHERE WI.WorkItemID = ?`,
+            [workItemId]
+        );
+
+        if (workItemRows.length === 0) {
+            return res.status(403).send('Unauthorized');
+        }
+
+        if (!verifyContractorOwnership(workItemRows[0].ContractorID, contractorId)) {
+            console.error(`[AUTH] Work Item ${workItemId}: ContractorID mismatch`);
+            return res.status(403).send('Unauthorized');
+        }
+
+        const workItem = workItemRows[0];
+
+        // Redirect to create-po with workItemId parameter
+        res.redirect(`/contractor/projects/${workItem.ProjectID}/create-po?workItemId=${workItemId}`);
+
+    } catch (err) {
+        console.error('Error initiating purchase:', err);
+        res.redirect('/contractor/projects');
+    }
+});
+
+// Helper function for material status classes
+function getMaterialStatusClass(status) {
+    const statusClasses = {
+        'Pending': 'bg-slate-100 text-slate-700',
+        'Ordered': 'bg-blue-100 text-blue-700',
+        'Partially_Ordered': 'bg-amber-100 text-amber-700',
+        'Partially_Delivered': 'bg-amber-100 text-amber-700',
+        'Delivered': 'bg-green-100 text-green-700'
+    };
+    return statusClasses[status] || 'bg-slate-100 text-slate-700';
+}
 
 module.exports = router;
