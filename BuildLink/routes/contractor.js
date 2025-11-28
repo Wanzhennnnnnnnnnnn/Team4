@@ -65,7 +65,7 @@ const renderWithLayout = async (req, res, viewName, data) => {
 };
 
 // ====================================================
-// Helper: 狀態顏色對照
+// Helper: 狀態顏色對照 (Projects用)
 // ====================================================
 const getStatusMeta = (status) => {
     switch (status) {
@@ -226,11 +226,20 @@ router.post('/projects/add', async (req, res) => {
         const { projectName, description, location, status, startDate, endDate, budget, clientName, clientContact } = req.body;
         const contractorId = req.signedCookies.userId;
 
-        await pool.execute(
+        const [result] = await pool.execute(
             `INSERT INTO Projects (ContractorID, ProjectName, Description, Location, Status, StartDate, EndDate, Budget, ClientName, ClientContact) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [contractorId, projectName, description, location, status, startDate, endDate, budget || 0, clientName, clientContact]
         );
+
+        // ★★★ 新增：建立專案時發送通知 ★★★
+        try {
+            await pool.execute(
+                'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                [contractorId, 'Project Created', `Project "${projectName}" has been successfully created.`, `/contractor/projects/${result.insertId}`]
+            );
+        } catch (e) { console.warn("Notif Error", e); }
+
         res.redirect('/contractor/projects');
     } catch (err) {
         console.error(err);
@@ -290,19 +299,19 @@ router.get('/projects/:id', async (req, res) => {
         // 格式化訂單日期
         orders.forEach(order => {
             if(order.OrderDate) order.OrderDate = order.OrderDate.toISOString().split('T')[0];
+            order.TotalAmount = parseFloat(order.TotalAmount).toLocaleString();
         });
 
         // 3. 取得工項列表
         const [workItems] = await pool.execute('SELECT * FROM WorkItems WHERE ProjectID = ? ORDER BY CreatedAt DESC', [projectId]);
 
-        // ★★★ 新增邏輯：為每個工項抓取已購買的材料 ★★★
+        // 為每個工項抓取已購買的材料
         for (let item of workItems) {
             // 格式化日期
             if(item.StartDate) item.StartDate = item.StartDate.toISOString().split('T')[0];
             if(item.EndDate) item.EndDate = item.EndDate.toISOString().split('T')[0];
 
             // 查詢關聯到此 WorkItemID 的訂單細項 (POItems)
-            // 我們需要串聯 PurchaseOrder -> POItems -> Materials -> Units/Suppliers
             const [materials] = await pool.execute(`
                 SELECT 
                     M.MaterialName, 
@@ -310,7 +319,9 @@ router.get('/projects/:id', async (req, res) => {
                     POI.UnitPrice, 
                     (POI.Quantity * POI.UnitPrice) as TotalPrice,
                     U.UnitName as Unit,
-                    S.SupplierName
+                    S.SupplierName,
+                    PO.POID,
+                    PO.Status
                 FROM PurchaseOrder PO
                 JOIN POItems POI ON PO.POID = POI.POID
                 JOIN Materials M ON POI.MaterialID = M.MaterialID
@@ -381,12 +392,22 @@ router.post('/projects/delete/:id', async (req, res) => {
 router.post('/projects/:id/workitem/add', async (req, res) => {
     try {
         const projectId = req.params.id;
+        const contractorId = req.signedCookies.userId;
         const { name, description, status, estimatedCost, startDate, endDate, notes } = req.body;
         await pool.execute(
             `INSERT INTO WorkItems (ProjectID, Name, Description, Status, EstimatedCost, StartDate, EndDate, Notes) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [projectId, name, description, status, estimatedCost || 0, startDate, endDate, notes]
         );
+
+        // ★★★ 新增：建立工項時發送通知 ★★★
+        try {
+            await pool.execute(
+                'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                [contractorId, 'Work Item Added', `New work item "${name}" added to the project.`, `/contractor/projects/${projectId}`]
+            );
+        } catch (e) { console.warn("Notif Error", e); }
+
         res.redirect(`/contractor/projects/${projectId}`);
     } catch (err) {
         console.error("Add Work Item Error:", err);
@@ -407,14 +428,13 @@ router.post('/projects/:projectId/workitem/delete/:workItemId', async (req, res)
 });
 
 // ==========================================
-// 5. Create PO (選擇供應商) - 更新版
+// 5. Create PO (選擇供應商)
 // ==========================================
 router.get('/projects/:id/create-po', async (req, res) => {
     try {
         const projectId = req.params.id;
         const searchQuery = req.query.q || '';
         const searchType = req.query.type || 'supplier';
-        // ★★★ 1. 接收 workItemId ★★★
         const workItemId = req.query.workItemId;
 
         const [projectRows] = await pool.execute('SELECT * FROM Projects WHERE ProjectID = ?', [projectId]);
@@ -440,7 +460,6 @@ router.get('/projects/:id/create-po', async (req, res) => {
             MatchedMaterial: s.MatchedMaterial || null
         }));
 
-        // ★★★ 2. 如果有 workItemId，取得其名稱以便顯示 ★★★
         let activeWorkItemName = '';
         if (workItemId) {
              const [wiRows] = await pool.execute('SELECT Name FROM WorkItems WHERE WorkItemID = ?', [workItemId]);
@@ -455,7 +474,6 @@ router.get('/projects/:id/create-po', async (req, res) => {
             searchType: searchType === 'material' ? 'Material' : 'Supplier Name',
             isTypeSupplier: searchType === 'supplier',
             isTypeMaterial: searchType === 'material',
-            // ★★★ 3. 傳遞給 View ★★★
             workItemId,
             activeWorkItemName 
         });
@@ -466,7 +484,7 @@ router.get('/projects/:id/create-po', async (req, res) => {
 });
 
 // ==========================================
-// 6. Supplier Details & Shopping Page (更新：支援工項選擇)
+// 6. Supplier Details & Shopping Page
 // ==========================================
 router.get('/supplier/:id', async (req, res) => {
     try {
@@ -524,7 +542,6 @@ router.get('/supplier/:id', async (req, res) => {
             }))
         };
 
-        // ★★★ 新增：撈取所有專案的工項，供前端下拉選單連動使用 ★★★
         const [allWorkItems] = await pool.execute(`
             SELECT WorkItemID, ProjectID, Name 
             FROM WorkItems 
@@ -539,7 +556,7 @@ router.get('/supplier/:id', async (req, res) => {
             searchQuery,
             preSelectedProjectId,
             preSelectedWorkItemId,
-            allWorkItemsJSON: JSON.stringify(allWorkItems) // 傳遞 JSON 給前端 JS 使用
+            allWorkItemsJSON: JSON.stringify(allWorkItems)
         });
 
     } catch (err) {
@@ -603,7 +620,7 @@ router.get('/materials', async (req, res) => {
 });
 
 // ==========================================
-// 8. Material Detail Page (完整版 - 包含電話信箱)
+// 8. Material Detail Page
 // ==========================================
 router.get('/materials/:id', async (req, res) => {
     try {
@@ -621,7 +638,6 @@ router.get('/materials/:id', async (req, res) => {
         if (matRows.length === 0) return res.redirect('/contractor/materials');
         const material = matRows[0];
 
-        // ★★★ 修正 SQL：加入 S.PhoneNumber, S.Email 以及 S.Description 欄位 ★★★
         const [suppliers] = await pool.execute(`
             SELECT S.SupplierID, S.SupplierName, S.Address, S.Rating, S.PhoneNumber, S.Email, S.Description,
                    SM.PricePerUnit, SM.AvailableStock
@@ -653,46 +669,153 @@ router.get('/materials/:id', async (req, res) => {
 });
 
 // ==========================================
-// 9. Transaction History (Orders)
+// 9. Transaction History (Orders) - ★★★ 修改版：支援專案篩選與進度條 ★★★
 // ==========================================
 router.get('/orders', async (req, res) => {
     try {
         const contractorId = req.signedCookies.userId;
+        const filterProjectId = req.query.projectId; // 取得前端傳來的篩選條件
         
-        const sql = `
+        // 1. 取得專案列表 (修正：使用 StartDate 排序)
+        const [projects] = await pool.execute(
+            'SELECT ProjectID, ProjectName FROM Projects WHERE ContractorID = ? ORDER BY StartDate DESC',
+            [contractorId]
+        );
+
+        // 標記目前被選中的專案
+        const projectsWithSelect = projects.map(p => ({
+            ...p,
+            selected: (p.ProjectID == filterProjectId) ? 'selected' : ''
+        }));
+
+        // 2. 準備訂單查詢 SQL
+        let sql = `
             SELECT PO.*, S.SupplierName as SupplierName, P.ProjectName
             FROM PurchaseOrder PO
             JOIN Suppliers S ON PO.SupplierID = S.SupplierID
             JOIN Projects P ON PO.ProjectID = P.ProjectID
             WHERE PO.ContractorID = ?
-            ORDER BY PO.OrderDate DESC
         `;
-        const [rawTransactions] = await pool.execute(sql, [contractorId]);
+        let params = [contractorId];
 
-        const groups = {};
-        rawTransactions.forEach(t => {
-            if (!groups[t.SupplierName]) {
-                groups[t.SupplierName] = { supplierName: t.SupplierName, totalSpent: 0, transactions: [] };
+        // 如果有選專案，加入篩選條件
+        if (filterProjectId) {
+            sql += ' AND PO.ProjectID = ?';
+            params.push(filterProjectId);
+        }
+
+        sql += ' ORDER BY PO.OrderDate DESC';
+
+        const [rawTransactions] = await pool.execute(sql, params);
+
+        // 3. Helper: 計算進度條狀態
+        const getProgress = (status) => {
+            switch(status) {
+                case 'Pending': return { width: '10%', step: 1 };
+                case 'Processing': return { width: '50%', step: 2 };
+                case 'Shipped': return { width: '80%', step: 3 };
+                case 'Delivered': return { width: '100%', step: 4 };
+                default: return { width: '0%', step: 0 };
             }
-            groups[t.SupplierName].totalSpent += parseFloat(t.TotalAmount);
-            groups[t.SupplierName].transactions.push({
-                TransactionDate: t.OrderDate.toISOString().split('T')[0],
-                MaterialName: `Order #${t.POID} - ${t.ProjectName || 'General'}`,
-                CategoryName: 'Mixed Materials',
-                Quantity: '-', 
-                PricePerUnit: '-',
-                TotalPrice: t.TotalAmount
-            });
+        };
+
+        // 4. 整理資料結構
+        const orders = rawTransactions.map(t => {
+            const progress = getProgress(t.Status);
+            return {
+                ...t,
+                FormattedDate: t.OrderDate.toISOString().split('T')[0],
+                FormattedArrival: t.EstimatedArrival ? t.EstimatedArrival.toISOString().split('T')[0] : 'TBD',
+                ProgressWidth: progress.width,
+                CurrentStep: progress.step,
+                IsPending: t.Status === 'Pending',
+                IsProcessing: t.Status === 'Processing',
+                IsShipped: t.Status === 'Shipped',
+                IsDelivered: t.Status === 'Delivered',
+                FormattedTotal: parseFloat(t.TotalAmount).toLocaleString()
+            };
         });
 
         await renderWithLayout(req, res, 'orders', { 
-            title: 'My Orders',
-            groups: Object.values(groups)
+            title: 'Track Orders',
+            orders: orders,
+            projects: projectsWithSelect, // 傳遞專案列表給前端下拉選單
+            filterProjectId
         });
 
     } catch (err) {
-        console.error(err);
+        console.error("Orders Page Error:", err);
         res.redirect('/contractor/dashboard');
+    }
+});
+
+// ==========================================
+// ★★★ 新增：模擬物流狀態推進 (Demo 用) + 通知功能 ★★★
+// ==========================================
+router.post('/orders/:id/simulate-status', async (req, res) => {
+    try {
+        const poId = req.params.id;
+        const contractorId = req.signedCookies.userId;
+        
+        // 1. 查出目前狀態
+        const [rows] = await pool.execute('SELECT Status FROM PurchaseOrder WHERE POID = ?', [poId]);
+        if (rows.length === 0) return res.redirect('/contractor/orders');
+        
+        const currentStatus = rows[0].Status;
+        let nextStatus = currentStatus;
+        let trackingNum = null;
+
+        // 2. 定義狀態流程
+        switch (currentStatus) {
+            case 'Pending':
+                nextStatus = 'Processing'; 
+                break;
+            case 'Processing':
+                nextStatus = 'Shipped';    
+                trackingNum = 'TN-' + Math.floor(100000 + Math.random() * 900000); 
+                break;
+            case 'Shipped':
+                nextStatus = 'Delivered';  
+                break;
+            default:
+                break; 
+        }
+
+        // 3. 更新資料庫
+        let sql = 'UPDATE PurchaseOrder SET Status = ?';
+        let params = [nextStatus];
+
+        if (trackingNum) {
+            sql += ', TrackingNumber = ?';
+            params.push(trackingNum);
+        }
+
+        sql += ' WHERE POID = ?';
+        params.push(poId);
+
+        await pool.execute(sql, params);
+
+        // ★★★ 新增：物流狀態變更時發送通知 ★★★
+        if (nextStatus !== currentStatus) {
+            try {
+                await pool.execute(
+                    'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                    [contractorId, 'Shipment Update', `Order #PO-${poId} status updated to ${nextStatus}.`, `/contractor/orders#order-${poId}`]
+                );
+            } catch (e) { console.warn("Notif Error", e); }
+        }
+
+        // 導回來源頁面
+        const referer = req.get('Referer');
+        if (referer) {
+            res.redirect(referer);
+        } else {
+            res.redirect('/contractor/orders');
+        }
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error updating status');
     }
 });
 
@@ -854,6 +977,7 @@ router.get('/cart', async (req, res) => {
     }
 });
 
+// ★★★ 修改版 Checkout：寫入預計抵達日期與初始狀態 ★★★
 router.post('/cart/checkout', async (req, res) => {
     const conn = await pool.getConnection();
     try {
@@ -866,9 +990,10 @@ router.post('/cart/checkout', async (req, res) => {
         for (const entry of cart) {
             const totalAmount = entry.items.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.qty)), 0);
 
+            // ★★★ 修改：將 deliveryDate 寫入 EstimatedArrival，並將 Status 初始設為 'Pending' ★★★
             const [poResult] = await conn.execute(
-                'INSERT INTO PurchaseOrder (ContractorID, ProjectID, WorkItemID, SupplierID, TotalAmount, Status, OrderDate) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-                [contractorId, entry.projectId, entry.workItemId, entry.supplierId, totalAmount, 'Pending']
+                'INSERT INTO PurchaseOrder (ContractorID, ProjectID, WorkItemID, SupplierID, TotalAmount, Status, OrderDate, EstimatedArrival) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)',
+                [contractorId, entry.projectId, entry.workItemId, entry.supplierId, totalAmount, 'Pending', entry.deliveryDate || null]
             );
             const poId = poResult.insertId;
 

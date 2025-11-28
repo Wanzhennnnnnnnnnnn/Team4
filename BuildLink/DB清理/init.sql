@@ -171,18 +171,23 @@ CREATE TABLE `PurchaseOrder` (
   `POID` int NOT NULL AUTO_INCREMENT,
   `ContractorID` int DEFAULT NULL,
   `ProjectID` int DEFAULT NULL,
+  `WorkItemID` int DEFAULT NULL,            -- ★★★ 新增：為了連結工項
   `SupplierID` varchar(50) DEFAULT NULL,
   `OrderDate` datetime DEFAULT CURRENT_TIMESTAMP,
   `Status` varchar(50) DEFAULT 'Pending',
   `TotalAmount` decimal(15,2) DEFAULT NULL,
+  `TrackingNumber` varchar(50) DEFAULT NULL, -- ★★★ 新增：物流單號
+  `EstimatedArrival` date DEFAULT NULL,      -- ★★★ 新增：預計抵達日
   PRIMARY KEY (`POID`),
   KEY `ContractorID` (`ContractorID`),
   KEY `ProjectID` (`ProjectID`),
+  KEY `WorkItemID` (`WorkItemID`),           -- ★★★ 新增：索引
   KEY `SupplierID` (`SupplierID`),
   CONSTRAINT `PurchaseOrder_ibfk_1` FOREIGN KEY (`ContractorID`) REFERENCES `Contractors` (`ContractorID`),
   CONSTRAINT `PurchaseOrder_ibfk_2` FOREIGN KEY (`ProjectID`) REFERENCES `Projects` (`ProjectID`),
-  CONSTRAINT `PurchaseOrder_ibfk_3` FOREIGN KEY (`SupplierID`) REFERENCES `Suppliers` (`SupplierID`)
-) ENGINE=InnoDB AUTO_INCREMENT=8193 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT `PurchaseOrder_ibfk_3` FOREIGN KEY (`SupplierID`) REFERENCES `Suppliers` (`SupplierID`),
+  CONSTRAINT `PurchaseOrder_ibfk_4` FOREIGN KEY (`WorkItemID`) REFERENCES `WorkItems` (`WorkItemID`) -- ★★★ 新增：外鍵關聯
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
