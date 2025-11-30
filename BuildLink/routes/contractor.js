@@ -27,26 +27,45 @@ const renderWithLayout = async (req, res, viewName, data) => {
             viewPath += '.hjs';
         }
 
-        // 3. 渲染內容
+        // 3. Get wishlist count
+        const wishlistCount = await getWishlistCount(contractorId);
+
+        // 4. 渲染內容
         res.render(viewPath, data, (err, html) => {
             if (err) {
                 console.error(`Error rendering view ${viewPath}:`, err);
                 return res.status(500).send(`Template Error: ${err.message}`);
             }
-            
-            // 4. 渲染 Layout，並傳入 Contractor 的資料
-            res.render('layout.hjs', { 
+
+            // 5. 渲染 Layout，並傳入 Contractor 的資料
+            res.render('layout.hjs', {
                 ...data,
                 content: html,
                 contractorName: currentUser.Name,
-                contractorEmail: currentUser.Email, 
-                [`is${viewName.replace('contractor/', '').charAt(0).toUpperCase() + viewName.replace('contractor/', '').slice(1)}`]: true 
+                contractorEmail: currentUser.Email,
+                wishlistCount: wishlistCount,
+                [`is${viewName.replace('contractor/', '').charAt(0).toUpperCase() + viewName.replace('contractor/', '').slice(1)}`]: true
             });
         });
     } catch (err) {
         console.error("Render Helper Error:", err);
         res.status(500).send("Internal Server Error");
     }
+};
+
+// Helper: 取得單一供應商，並標準化欄位
+const fetchSupplierById = async (supplierId) => {
+    const [rows] = await pool.execute('SELECT * FROM Suppliers WHERE SupplierID = ?', [supplierId]);
+    if (rows.length === 0) return null;
+    const supplier = rows[0];
+    return {
+        ...supplier,
+        CompanyName: supplier.SupplierName || supplier.Name || supplier.CompanyName,
+        PhoneNumber: supplier.PhoneNumber || 'N/A',
+        Email: supplier.Email || 'N/A',
+        Address: supplier.Address || 'N/A',
+        Rating: supplier.Rating || 'N/A'
+    };
 };
 
 // ==========================================
@@ -337,20 +356,40 @@ router.get('/supplier/:id', async (req, res) => {
             isSelected: (p.ProjectID == preSelectedProjectId)
         }));
 
+        // Check if supplier is saved
+        const [savedSupplier] = await pool.execute(
+            'SELECT 1 FROM SavedSuppliers WHERE ContractorID = ? AND SupplierID = ?',
+            [contractorId, supplierId]
+        );
+        supplier.isSaved = savedSupplier.length > 0;
+
+        // Check if materials are saved
+        const materialsWithSavedStatus = await Promise.all(materials.map(async (m) => {
+            const [saved] = await pool.execute(
+                'SELECT 1 FROM SavedMaterials WHERE ContractorID = ? AND MaterialID = ?',
+                [contractorId, m.MaterialID]
+            );
+            return {
+                ...m,
+                isSaved: saved.length > 0
+            };
+        }));
+
         // 準備資料給前端
         const supplierData = {
             ...supplier, // 這會包含 Address, Email, PhoneNumber 等原始欄位
-            CompanyName: supplier.SupplierName || supplier.Name, 
+            CompanyName: supplier.SupplierName || supplier.Name,
             // ★★★ 確保電話和 Email 有預設值 ★★★
             PhoneNumber: supplier.PhoneNumber || 'N/A',
             Email: supplier.Email || 'N/A',
-            items: materials.map(m => ({
+            items: materialsWithSavedStatus.map(m => ({
                 id: m.MaterialID,
                 name: m.MaterialName,
                 category: m.CategoryName || 'General',
                 unit: m.UnitName || 'unit',
                 price: m.PricePerUnit,
-                stock: m.AvailableStock
+                stock: m.AvailableStock,
+                isSaved: m.isSaved
             }))
         };
 
@@ -410,6 +449,110 @@ router.post('/supplier/:id/create-order', async (req, res) => {
 });
 
 // ==========================================
+// 7.1 Message Supplier (Chat)
+// ==========================================
+router.get('/supplier/:id/message', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const supplierId = req.params.id;
+
+        const supplier = await fetchSupplierById(supplierId);
+        if (!supplier) {
+            return res.redirect('/contractor/suppliers');
+        }
+
+        const [rows] = await pool.execute(
+            `SELECT MessageID, SenderType, MessageText, CreatedAt 
+             FROM ContractorSupplierMessages
+             WHERE ContractorID = ? AND SupplierID = ?
+             ORDER BY CreatedAt ASC
+             LIMIT 200`,
+            [contractorId, supplierId]
+        );
+
+        const messages = rows.map(m => ({
+            id: m.MessageID,
+            sender: m.SenderType,
+            text: m.MessageText,
+            createdAt: (m.CreatedAt instanceof Date ? m.CreatedAt : new Date(m.CreatedAt)).toISOString()
+        }));
+
+        await renderWithLayout(req, res, 'message_supplier', {
+            title: `Message ${supplier.CompanyName}`,
+            supplier,
+            messages,
+            messagesJson: JSON.stringify(messages),
+            isSuppliers: true,
+            error: req.query.error
+        });
+    } catch (err) {
+        console.error('Message page error:', err);
+        res.redirect('/contractor/suppliers');
+    }
+});
+
+router.post('/supplier/:id/message', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const supplierId = req.params.id;
+        const raw = (req.body.message || '').trim();
+
+        if (!raw) {
+            return res.redirect(`/contractor/supplier/${supplierId}/message?error=empty`);
+        }
+
+        const message = raw.slice(0, 2000); // basic length guard
+
+        await pool.execute(
+            `INSERT INTO ContractorSupplierMessages (ContractorID, SupplierID, SenderType, MessageText)
+             VALUES (?, ?, 'Contractor', ?)`,
+            [contractorId, supplierId, message]
+        );
+
+        res.redirect(`/contractor/supplier/${supplierId}/message`);
+    } catch (err) {
+        console.error('Send message error:', err);
+        res.redirect(`/contractor/supplier/${req.params.id}/message?error=failed`);
+    }
+});
+
+// JSON feed for light polling
+router.get('/supplier/:id/messages', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const supplierId = req.params.id;
+        const since = req.query.since ? new Date(req.query.since) : null;
+
+        let sql = `
+            SELECT MessageID, SenderType, MessageText, CreatedAt 
+            FROM ContractorSupplierMessages
+            WHERE ContractorID = ? AND SupplierID = ?
+        `;
+        const params = [contractorId, supplierId];
+
+        if (since && !isNaN(since.getTime())) {
+            sql += ' AND CreatedAt > ?';
+            params.push(since);
+        }
+
+        sql += ' ORDER BY CreatedAt ASC LIMIT 200';
+
+        const [rows] = await pool.execute(sql, params);
+        res.json({
+            messages: rows.map(m => ({
+                id: m.MessageID,
+                sender: m.SenderType,
+                text: m.MessageText,
+                createdAt: (m.CreatedAt instanceof Date ? m.CreatedAt : new Date(m.CreatedAt)).toISOString()
+            }))
+        });
+    } catch (err) {
+        console.error('Messages feed error:', err);
+        res.status(500).json({ error: 'Failed to load messages' });
+    }
+});
+
+// ==========================================
 // 8. Transaction History (Orders)
 // ==========================================
 router.get('/orders', async (req, res) => {
@@ -453,6 +596,141 @@ router.get('/orders', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.redirect('/contractor/dashboard');
+    }
+});
+
+// ==========================================
+// WISHLIST/FAVORITES ROUTES
+// ==========================================
+
+// Helper: Get wishlist count for a contractor
+const getWishlistCount = async (contractorId) => {
+    try {
+        const [suppliers] = await pool.execute(
+            'SELECT COUNT(*) as count FROM SavedSuppliers WHERE ContractorID = ?',
+            [contractorId]
+        );
+        const [materials] = await pool.execute(
+            'SELECT COUNT(*) as count FROM SavedMaterials WHERE ContractorID = ?',
+            [contractorId]
+        );
+        return suppliers[0].count + materials[0].count;
+    } catch (err) {
+        console.error('Error getting wishlist count:', err);
+        return 0;
+    }
+};
+
+// 1. View Wishlist Page
+router.get('/wishlist', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+
+        // Get saved suppliers
+        const [savedSuppliers] = await pool.execute(`
+            SELECT S.*, SS.SavedAt
+            FROM SavedSuppliers SS
+            JOIN Suppliers S ON SS.SupplierID = S.SupplierID
+            WHERE SS.ContractorID = ?
+            ORDER BY SS.SavedAt DESC
+        `, [contractorId]);
+
+        // Get saved materials with supplier context
+        const [savedMaterials] = await pool.execute(`
+            SELECT M.*, SM.SavedAt, SM.SupplierID,
+                   S.SupplierName, U.UnitName, C.CategoryName,
+                   COALESCE(SM_price.PricePerUnit, 0) as PricePerUnit,
+                   COALESCE(SM_price.AvailableStock, 0) as AvailableStock
+            FROM SavedMaterials SM
+            JOIN Materials M ON SM.MaterialID = M.MaterialID
+            LEFT JOIN Suppliers S ON SM.SupplierID = S.SupplierID
+            LEFT JOIN Units U ON M.UnitID = U.UnitID
+            LEFT JOIN Categories C ON M.CategoryID = C.CategoryID
+            LEFT JOIN SupplierMaterial SM_price ON M.MaterialID = SM_price.MaterialID
+                AND SM.SupplierID = SM_price.SupplierID
+            WHERE SM.ContractorID = ?
+            ORDER BY SM.SavedAt DESC
+        `, [contractorId]);
+
+        const wishlistCount = savedSuppliers.length + savedMaterials.length;
+
+        await renderWithLayout(req, res, 'wishlist', {
+            title: 'Wishlist',
+            isWishlist: true,
+            savedSuppliers,
+            savedMaterials,
+            wishlistCount
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error: ' + err.message);
+    }
+});
+
+// 2. Toggle Save Supplier
+router.post('/wishlist/supplier/:supplierId/toggle', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const { supplierId } = req.params;
+
+        // Check if exists
+        const [existing] = await pool.execute(
+            'SELECT * FROM SavedSuppliers WHERE ContractorID = ? AND SupplierID = ?',
+            [contractorId, supplierId]
+        );
+
+        if (existing.length > 0) {
+            // Remove
+            await pool.execute(
+                'DELETE FROM SavedSuppliers WHERE ContractorID = ? AND SupplierID = ?',
+                [contractorId, supplierId]
+            );
+            res.json({ saved: false, message: 'Supplier removed from wishlist' });
+        } else {
+            // Add
+            await pool.execute(
+                'INSERT INTO SavedSuppliers (ContractorID, SupplierID) VALUES (?, ?)',
+                [contractorId, supplierId]
+            );
+            res.json({ saved: true, message: 'Supplier saved to wishlist!' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to update wishlist' });
+    }
+});
+
+// 3. Toggle Save Material
+router.post('/wishlist/material/:materialId/toggle', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const { materialId } = req.params;
+        const { supplierContext } = req.body || {};
+
+        // Check if exists
+        const [existing] = await pool.execute(
+            'SELECT * FROM SavedMaterials WHERE ContractorID = ? AND MaterialID = ?',
+            [contractorId, materialId]
+        );
+
+        if (existing.length > 0) {
+            // Remove
+            await pool.execute(
+                'DELETE FROM SavedMaterials WHERE ContractorID = ? AND MaterialID = ?',
+                [contractorId, materialId]
+            );
+            res.json({ saved: false, message: 'Material removed from wishlist' });
+        } else {
+            // Add
+            await pool.execute(
+                'INSERT INTO SavedMaterials (ContractorID, MaterialID, SupplierID) VALUES (?, ?, ?)',
+                [contractorId, materialId, supplierContext || null]
+            );
+            res.json({ saved: true, message: 'Material saved to wishlist!' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to update wishlist' });
     }
 });
 

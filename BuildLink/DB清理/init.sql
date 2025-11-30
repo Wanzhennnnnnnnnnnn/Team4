@@ -433,6 +433,76 @@ INSERT INTO `units` VALUES (20,'900㎠'),(17,'B.㎥'),(2,'Bag'),(19,'C.㎥'),(1,
 UNLOCK TABLES;
 
 --
+-- Table structure for table `SavedSuppliers`
+--
+
+DROP TABLE IF EXISTS `SavedSuppliers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `SavedSuppliers` (
+  `SavedSupplierID` INT NOT NULL AUTO_INCREMENT,
+  `ContractorID` INT NOT NULL,
+  `SupplierID` VARCHAR(50) NOT NULL,
+  `SavedAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`SavedSupplierID`),
+  UNIQUE KEY `unique_contractor_supplier` (`ContractorID`, `SupplierID`),
+  KEY `idx_contractor` (`ContractorID`),
+  KEY `idx_saved_at` (`SavedAt`),
+  CONSTRAINT `SavedSuppliers_ibfk_1` FOREIGN KEY (`ContractorID`)
+    REFERENCES `Contractors` (`ContractorID`) ON DELETE CASCADE,
+  CONSTRAINT `SavedSuppliers_ibfk_2` FOREIGN KEY (`SupplierID`)
+    REFERENCES `Suppliers` (`SupplierID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `SavedMaterials`
+--
+
+DROP TABLE IF EXISTS `SavedMaterials`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `SavedMaterials` (
+  `SavedMaterialID` INT NOT NULL AUTO_INCREMENT,
+  `ContractorID` INT NOT NULL,
+  `MaterialID` VARCHAR(50) NOT NULL,
+  `SupplierID` VARCHAR(50) NULL,
+  `SavedAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`SavedMaterialID`),
+  UNIQUE KEY `unique_contractor_material` (`ContractorID`, `MaterialID`),
+  KEY `idx_contractor` (`ContractorID`),
+  KEY `idx_saved_at` (`SavedAt`),
+  CONSTRAINT `SavedMaterials_ibfk_1` FOREIGN KEY (`ContractorID`)
+    REFERENCES `Contractors` (`ContractorID`) ON DELETE CASCADE,
+  CONSTRAINT `SavedMaterials_ibfk_2` FOREIGN KEY (`MaterialID`)
+    REFERENCES `Materials` (`MaterialID`) ON DELETE CASCADE,
+  CONSTRAINT `SavedMaterials_ibfk_3` FOREIGN KEY (`SupplierID`)
+    REFERENCES `Suppliers` (`SupplierID`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `ContractorSupplierMessages`
+--
+
+DROP TABLE IF EXISTS `ContractorSupplierMessages`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ContractorSupplierMessages` (
+  `MessageID` INT NOT NULL AUTO_INCREMENT,
+  `ContractorID` INT NOT NULL,
+  `SupplierID` VARCHAR(50) NOT NULL,
+  `SenderType` ENUM('Contractor','Supplier') NOT NULL,
+  `MessageText` TEXT NOT NULL,
+  `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`MessageID`),
+  KEY `idx_contractor_supplier` (`ContractorID`,`SupplierID`,`CreatedAt`),
+  CONSTRAINT `ContractorSupplierMessages_ibfk_1` FOREIGN KEY (`ContractorID`) REFERENCES `Contractors` (`ContractorID`),
+  CONSTRAINT `ContractorSupplierMessages_ibfk_2` FOREIGN KEY (`SupplierID`) REFERENCES `Suppliers` (`SupplierID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping routines for database 'assignment_db'
 --
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

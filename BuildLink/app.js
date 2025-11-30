@@ -10,6 +10,7 @@ const contractorRouter = require('./routes/contractor');
 const app = express();
 app.set('view engine', 'hjs');
 app.set('views', path.join(__dirname, 'views'));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser('secretingredient'));
 app.use(express.static(path.join(__dirname, 'public')));

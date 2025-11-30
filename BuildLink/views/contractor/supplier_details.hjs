@@ -27,9 +27,24 @@
                 </div>
             </div>
             
-            <div class="flex items-center space-x-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 self-start">
-                <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-current"></i>
-                <span class="text-amber-700 font-bold text-sm">{{supplier.Rating}}</span>
+            <div class="flex items-center gap-2">
+                <!-- Save Supplier Button -->
+                <button onclick="toggleSaveSupplier('{{supplier.SupplierID}}')"
+                        id="saveSupplierBtn"
+                        class="p-2 rounded-lg border transition-colors {{#supplier.isSaved}}bg-red-50 border-red-200{{/supplier.isSaved}}{{^supplier.isSaved}}bg-white border-slate-200 hover:border-red-200{{/supplier.isSaved}}"
+                        title="{{#supplier.isSaved}}Remove from wishlist{{/supplier.isSaved}}{{^supplier.isSaved}}Save to wishlist{{/supplier.isSaved}}">
+                    <i data-lucide="heart" class="w-5 h-5 {{#supplier.isSaved}}text-red-500 fill-current{{/supplier.isSaved}}{{^supplier.isSaved}}text-slate-400{{/supplier.isSaved}}"></i>
+                </button>
+
+                <!-- Rating Badge -->
+                <div class="flex items-center space-x-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 self-start">
+                    <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-current"></i>
+                    <span class="text-amber-700 font-bold text-sm">{{supplier.Rating}}</span>
+                </div>
+                <a href="/contractor/supplier/{{supplier.SupplierID}}/message" class="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-semibold">
+                    <i data-lucide="messages-square" class="w-4 h-4"></i>
+                    <span>Message</span>
+                </a>
             </div>
         </div>
     </div>
@@ -90,6 +105,16 @@
                     <div class="font-bold text-slate-800 text-lg">${{price}}</div>
                     <div class="text-xs text-slate-500">per {{unit}}</div>
                 </div>
+
+                <!-- Save Material Button -->
+                <button onclick="toggleSaveMaterial('{{id}}', '{{../supplier.SupplierID}}')"
+                        id="saveMaterialBtn-{{id}}"
+                        class="p-2 rounded-lg border transition-colors {{#isSaved}}bg-red-50 border-red-200{{/isSaved}}{{^isSaved}}bg-white border-slate-200 hover:border-red-200{{/isSaved}}"
+                        type="button"
+                        title="{{#isSaved}}Remove from wishlist{{/isSaved}}{{^isSaved}}Save to wishlist{{/isSaved}}">
+                    <i data-lucide="heart" class="w-4 h-4 {{#isSaved}}text-red-500 fill-current{{/isSaved}}{{^isSaved}}text-slate-400{{/isSaved}}"></i>
+                </button>
+
                 <div class="flex items-center gap-3 bg-slate-50 rounded-lg p-1 border border-slate-200">
                     <button type="button" onclick="updateQty('{{id}}', -1, {{price}})" class="w-8 h-8 flex items-center justify-center rounded-md bg-white shadow-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
                         <i data-lucide="minus" class="w-4 h-4"></i>
@@ -211,5 +236,94 @@
             return;
         }
         document.getElementById('orderForm').submit();
+    }
+
+    // Toggle save supplier
+    async function toggleSaveSupplier(supplierId) {
+        try {
+            const response = await fetch(`/contractor/wishlist/supplier/${supplierId}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+
+            // Update UI
+            const btn = document.getElementById('saveSupplierBtn');
+            const icon = btn.querySelector('[data-lucide="heart"]');
+
+            if (data.saved) {
+                btn.classList.add('bg-red-50', 'border-red-200');
+                btn.classList.remove('bg-white', 'border-slate-200');
+                icon.classList.add('text-red-500', 'fill-current');
+                icon.classList.remove('text-slate-400');
+                btn.title = 'Remove from wishlist';
+            } else {
+                btn.classList.remove('bg-red-50', 'border-red-200');
+                btn.classList.add('bg-white', 'border-slate-200');
+                icon.classList.remove('text-red-500', 'fill-current');
+                icon.classList.add('text-slate-400');
+                btn.title = 'Save to wishlist';
+            }
+
+            lucide.createIcons();
+            showToast(data.message, data.saved ? 'success' : 'info');
+        } catch (err) {
+            console.error('Error toggling supplier:', err);
+            showToast('Failed to update wishlist', 'error');
+        }
+    }
+
+    // Toggle save material
+    async function toggleSaveMaterial(materialId, supplierId) {
+        try {
+            const response = await fetch(`/contractor/wishlist/material/${materialId}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ supplierContext: supplierId })
+            });
+            const data = await response.json();
+
+            const btn = document.getElementById(`saveMaterialBtn-${materialId}`);
+            const icon = btn.querySelector('[data-lucide="heart"]');
+
+            if (data.saved) {
+                btn.classList.add('bg-red-50', 'border-red-200');
+                btn.classList.remove('bg-white', 'border-slate-200');
+                icon.classList.add('text-red-500', 'fill-current');
+                icon.classList.remove('text-slate-400');
+                btn.title = 'Remove from wishlist';
+            } else {
+                btn.classList.remove('bg-red-50', 'border-red-200');
+                btn.classList.add('bg-white', 'border-slate-200');
+                icon.classList.remove('text-red-500', 'fill-current');
+                icon.classList.add('text-slate-400');
+                btn.title = 'Save to wishlist';
+            }
+
+            lucide.createIcons();
+            showToast(data.message, data.saved ? 'success' : 'info');
+        } catch (err) {
+            console.error('Error toggling material:', err);
+            showToast('Failed to update wishlist', 'error');
+        }
+    }
+
+    // Toast notification utility
+    function showToast(message, type = 'info') {
+        const colors = {
+            success: 'bg-green-50 text-green-800 border-green-200',
+            error: 'bg-red-50 text-red-800 border-red-200',
+            info: 'bg-blue-50 text-blue-800 border-blue-200'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-4 py-3 rounded-lg border shadow-lg z-50 ${colors[type]} transition-opacity duration-300`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
     }
 </script>
