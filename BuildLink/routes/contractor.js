@@ -1,24 +1,37 @@
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql2/promise'); 
+const mysql = require('mysql2/promise');
 const config = require('../config');
 const pool = mysql.createPool(config.db);
 
-// Helper: 兩階段渲染 (包含抓取承包商個人資料)
+// ====================================================
+// Helper: 兩階段渲染 (包含抓取承包商資料 & 未讀通知數)
+// ====================================================
 const renderWithLayout = async (req, res, viewName, data) => {
     try {
-        // 1. 抓取當前登入的 Contractor 資料 (給 Layout 右上角用)
         const contractorId = req.signedCookies.userId;
-        let currentUser = { Name: 'Contractor', Email: '', Address: '' };
-        
+        let currentUser = { Name: 'Contractor', Email: '', Address: '', PhoneNumber: '' };
+        let unreadCount = 0;
+
         if (contractorId) {
+            // 1. 抓取當前使用者資料
             const [users] = await pool.execute('SELECT * FROM Contractors WHERE ContractorID = ?', [contractorId]);
             if (users.length > 0) {
                 currentUser = users[0];
             }
+
+            // 2. 抓取未讀通知數量
+            try {
+                const [notifResult] = await pool.execute(
+                    'SELECT COUNT(*) as count FROM Notifications WHERE ContractorID = ? AND IsRead = 0',
+                    [contractorId]
+                );
+                unreadCount = notifResult[0].count;
+            } catch (e) {
+                // console.warn("Notifications table might not exist.");
+            }
         }
 
-        // 2. 處理 View 路徑
         let viewPath = viewName;
         if (!viewName.includes('/')) {
             viewPath = `contractor/${viewName}`;
@@ -27,20 +40,22 @@ const renderWithLayout = async (req, res, viewName, data) => {
             viewPath += '.hjs';
         }
 
-        // 3. 渲染內容
         res.render(viewPath, data, (err, html) => {
             if (err) {
                 console.error(`Error rendering view ${viewPath}:`, err);
                 return res.status(500).send(`Template Error: ${err.message}`);
             }
-            
-            // 4. 渲染 Layout，並傳入 Contractor 的資料
-            res.render('layout.hjs', { 
+
+            res.render('layout.hjs', {
                 ...data,
                 content: html,
                 contractorName: currentUser.Name,
-                contractorEmail: currentUser.Email, 
-                [`is${viewName.replace('contractor/', '').charAt(0).toUpperCase() + viewName.replace('contractor/', '').slice(1)}`]: true 
+                contractorEmail: currentUser.Email,
+                contractorPhone: currentUser.PhoneNumber,
+                contractorAddress: currentUser.Address,
+                notificationCount: unreadCount,
+                cartItemCount: (req.signedCookies.shoppingCart || []).length,
+                [`is${viewName.replace('contractor/', '').charAt(0).toUpperCase() + viewName.replace('contractor/', '').slice(1)}`]: true
             });
         });
     } catch (err) {
@@ -49,35 +64,43 @@ const renderWithLayout = async (req, res, viewName, data) => {
     }
 };
 
+// ====================================================
+// Helper: 狀態顏色對照
+// ====================================================
+const getStatusMeta = (status) => {
+    switch (status) {
+        case 'In Progress': return { class: 'bg-amber-50 text-amber-600 border-amber-200', label: 'In Progress' };
+        case 'Completed':   return { class: 'bg-green-50 text-green-600 border-green-200', label: 'Completed' };
+        case 'On Hold':     return { class: 'bg-red-50 text-red-600 border-red-200', label: 'On Hold' };
+        default:            return { class: 'bg-slate-100 text-slate-500 border-slate-200', label: 'Planning' };
+    }
+};
+
 // ==========================================
-// 1. Dashboard
+// 1. Dashboard (儀表板)
 // ==========================================
 router.get('/dashboard', async (req, res) => {
     try {
         const contractorId = req.signedCookies.userId;
 
-        // 1. Total Spend
         const [spendResult] = await pool.execute(
-            'SELECT SUM(TotalAmount) as total FROM PurchaseOrder WHERE ContractorID = ?', 
+            'SELECT SUM(TotalAmount) as total FROM PurchaseOrder WHERE ContractorID = ?',
             [contractorId]
         );
         const totalSpent = (spendResult[0].total || 0).toLocaleString();
 
-        // 2. Active Orders
         const [activeOrderResult] = await pool.execute(
-            'SELECT COUNT(*) as count FROM PurchaseOrder WHERE ContractorID = ? AND Status != "Completed" AND Status != "Delivered"', 
+            'SELECT COUNT(*) as count FROM PurchaseOrder WHERE ContractorID = ? AND Status != "Completed" AND Status != "Delivered"',
             [contractorId]
         );
         const activeOrdersCount = activeOrderResult[0].count;
 
-        // 3. Active Projects
         const [activeProjectResult] = await pool.execute(
-            'SELECT COUNT(*) as count FROM Projects WHERE ContractorID = ? AND Status != "Completed"', 
+            'SELECT COUNT(*) as count FROM Projects WHERE ContractorID = ? AND Status != "Completed"',
             [contractorId]
         );
         const activeProjectsCount = activeProjectResult[0].count;
 
-        // 4. Recent Orders
         const [recentOrders] = await pool.execute(`
             SELECT PO.TotalAmount, PO.Status, P.ProjectName, S.SupplierName as SupplierName
             FROM PurchaseOrder PO
@@ -112,26 +135,23 @@ router.get('/dashboard', async (req, res) => {
 });
 
 // ==========================================
-// 2. Suppliers List (支援搜尋功能)
+// 2. Suppliers List (供應商列表)
 // ==========================================
 router.get('/suppliers', async (req, res) => {
     try {
         const searchQuery = req.query.q || '';
-        const searchType = req.query.type || 'supplier'; // 'supplier' or 'material'
-        
+        const searchType = req.query.type || 'supplier';
+
         let sql = 'SELECT * FROM Suppliers';
         let params = [];
 
-        // ★★★ 搜尋邏輯 ★★★
         if (searchQuery) {
             if (searchType === 'material') {
-                sql = `
-                    SELECT DISTINCT S.*, M.MaterialName as MatchedMaterial
-                    FROM Suppliers S
-                    JOIN SupplierMaterial SM ON S.SupplierID = SM.SupplierID
-                    JOIN Materials M ON SM.MaterialID = M.MaterialID
-                    WHERE M.MaterialName LIKE ?
-                `;
+                sql = `SELECT DISTINCT S.*, M.MaterialName as MatchedMaterial
+                       FROM Suppliers S
+                       JOIN SupplierMaterial SM ON S.SupplierID = SM.SupplierID
+                       JOIN Materials M ON SM.MaterialID = M.MaterialID
+                       WHERE M.MaterialName LIKE ?`;
                 params = [`%${searchQuery}%`];
             } else {
                 sql = 'SELECT * FROM Suppliers WHERE SupplierName LIKE ?';
@@ -140,13 +160,13 @@ router.get('/suppliers', async (req, res) => {
         }
 
         const [rows] = await pool.execute(sql, params);
-        
+
         const suppliers = rows.map(s => ({
             ...s,
             CompanyName: s.SupplierName || s.Name || s.CompanyName,
             CompanyID: s.SupplierID,
             isSupplier: true,
-            MatchedMaterial: s.MatchedMaterial || null 
+            MatchedMaterial: s.MatchedMaterial || null
         }));
 
         await renderWithLayout(req, res, 'suppliers', {
@@ -164,19 +184,43 @@ router.get('/suppliers', async (req, res) => {
 });
 
 // ==========================================
-// 3. Projects List
+// 3. Projects List (專案列表)
 // ==========================================
 router.get('/projects', async (req, res) => {
     try {
         const contractorId = req.signedCookies.userId;
-        const [projects] = await pool.execute(
-            'SELECT * FROM Projects WHERE ContractorID = ? ORDER BY StartDate DESC', 
-            [contractorId]
-        );
-        
+
+        const sql = `
+            SELECT P.*, COALESCE(SUM(PO.TotalAmount), 0) as TotalSpent
+            FROM Projects P
+            LEFT JOIN PurchaseOrder PO ON P.ProjectID = PO.ProjectID
+            WHERE P.ContractorID = ?
+            GROUP BY P.ProjectID
+            ORDER BY P.StartDate DESC
+        `;
+
+        const [projects] = await pool.execute(sql, [contractorId]);
+
+        const formattedProjects = projects.map(p => {
+            const budget = parseFloat(p.Budget) || 0;
+            const spent = parseFloat(p.TotalSpent) || 0;
+            const percentage = budget > 0 ? Math.min(Math.round((spent / budget) * 100), 100) : 0;
+            const statusMeta = getStatusMeta(p.Status);
+
+            return {
+                ...p,
+                FormattedStartDate: p.StartDate ? p.StartDate.toISOString().split('T')[0] : '-',
+                FormattedBudget: budget.toLocaleString(),
+                FormattedSpent: spent.toLocaleString(),
+                ProgressPercent: percentage,
+                StatusClass: statusMeta.class,
+                StatusLabel: statusMeta.label
+            };
+        });
+
         await renderWithLayout(req, res, 'projects', {
             title: 'Projects',
-            projects
+            projects: formattedProjects
         });
     } catch (err) {
         console.error(err);
@@ -184,15 +228,15 @@ router.get('/projects', async (req, res) => {
     }
 });
 
-// Add Project (POST)
 router.post('/projects/add', async (req, res) => {
     try {
-        const { projectName, location, startDate } = req.body;
+        const { projectName, description, location, status, startDate, endDate, budget, clientName, clientContact } = req.body;
         const contractorId = req.signedCookies.userId;
 
         await pool.execute(
-            'INSERT INTO Projects (ContractorID, ProjectName, Location, StartDate, Status) VALUES (?, ?, ?, ?, ?)',
-            [contractorId, projectName, location, startDate, 'Planning']
+            `INSERT INTO Projects (ContractorID, ProjectName, Description, Location, Status, StartDate, EndDate, Budget, ClientName, ClientContact) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [contractorId, projectName, description, location, status, startDate, endDate, budget || 0, clientName, clientContact]
         );
         res.redirect('/contractor/projects');
     } catch (err) {
@@ -202,36 +246,100 @@ router.post('/projects/add', async (req, res) => {
 });
 
 // ==========================================
-// 4. Project Details
+// 4. Project Details (專案詳情 + 工項)
 // ==========================================
 router.get('/projects/:id', async (req, res) => {
     try {
         const projectId = req.params.id;
-        
-        const [projectRows] = await pool.execute('SELECT * FROM Projects WHERE ProjectID = ?', [projectId]);
-        const project = projectRows[0];
 
+        // 1. 取得專案基本資料 & 總花費
+        const [projectRows] = await pool.execute(`
+            SELECT P.*, COALESCE(SUM(PO.TotalAmount), 0) as TotalSpent
+            FROM Projects P
+            LEFT JOIN PurchaseOrder PO ON P.ProjectID = PO.ProjectID
+            WHERE P.ProjectID = ?
+            GROUP BY P.ProjectID
+        `, [projectId]);
+
+        if (projectRows.length === 0) return res.redirect('/contractor/projects');
+
+        const p = projectRows[0];
+        const budget = parseFloat(p.Budget) || 0;
+        const spent = parseFloat(p.TotalSpent) || 0;
+        const percentage = budget > 0 ? Math.min(Math.round((spent / budget) * 100), 100) : 0;
+        const statusMeta = getStatusMeta(p.Status);
+
+        const projectData = {
+            ...p,
+            RawStartDate: p.StartDate ? p.StartDate.toISOString().split('T')[0] : '',
+            RawEndDate: p.EndDate ? p.EndDate.toISOString().split('T')[0] : '',
+            FormattedStartDate: p.StartDate ? p.StartDate.toISOString().split('T')[0] : '-',
+            FormattedBudget: budget.toLocaleString(),
+            FormattedSpent: spent.toLocaleString(),
+            ProgressPercent: percentage,
+            StatusClass: statusMeta.class,
+            StatusLabel: statusMeta.label,
+            isPlanning: p.Status === 'Planning',
+            isInProgress: p.Status === 'In Progress',
+            isCompleted: p.Status === 'Completed',
+            isOnHold: p.Status === 'On Hold'
+        };
+
+        // 2. 取得該專案的所有訂單 (歷史紀錄用)
         const [orders] = await pool.execute(`
-            SELECT PO.POID, PO.Status, PO.OrderDate, S.SupplierName as SupplierName
+            SELECT PO.POID, PO.Status, PO.OrderDate, PO.TotalAmount, PO.WorkItemID, S.SupplierName
             FROM PurchaseOrder PO
             JOIN Suppliers S ON PO.SupplierID = S.SupplierID
             WHERE PO.ProjectID = ?
+            ORDER BY PO.OrderDate DESC
         `, [projectId]);
+        
+        // 格式化訂單日期
+        orders.forEach(order => {
+            if(order.OrderDate) order.OrderDate = order.OrderDate.toISOString().split('T')[0];
+        });
 
-        const ordersWithItems = orders.map(o => ({
-            ...o,
-            DeliveryDate: '2024-12-01', 
-            Items: [
-                { Material: 'Steel Beams', Quantity: 50, Price: 5000 },
-                { Material: 'Cement Bags', Quantity: 200, Price: 1500 }
-            ],
-            DeliveryStatus: 'On The Way'
-        }));
+        // 3. 取得工項列表
+        const [workItems] = await pool.execute('SELECT * FROM WorkItems WHERE ProjectID = ? ORDER BY CreatedAt DESC', [projectId]);
+
+        // ★★★ 新增邏輯：為每個工項抓取已購買的材料 ★★★
+        for (let item of workItems) {
+            // 格式化日期
+            if(item.StartDate) item.StartDate = item.StartDate.toISOString().split('T')[0];
+            if(item.EndDate) item.EndDate = item.EndDate.toISOString().split('T')[0];
+
+            // 查詢關聯到此 WorkItemID 的訂單細項 (POItems)
+            // 我們需要串聯 PurchaseOrder -> POItems -> Materials -> Units/Suppliers
+            const [materials] = await pool.execute(`
+                SELECT 
+                    M.MaterialName, 
+                    POI.Quantity, 
+                    POI.UnitPrice, 
+                    (POI.Quantity * POI.UnitPrice) as TotalPrice,
+                    U.UnitName as Unit,
+                    S.SupplierName
+                FROM PurchaseOrder PO
+                JOIN POItems POI ON PO.POID = POI.POID
+                JOIN Materials M ON POI.MaterialID = M.MaterialID
+                LEFT JOIN Units U ON M.UnitID = U.UnitID
+                JOIN Suppliers S ON PO.SupplierID = S.SupplierID
+                WHERE PO.WorkItemID = ?
+            `, [item.WorkItemID]);
+            
+            // 處理數字顯示
+            materials.forEach(mat => {
+                mat.TotalPrice = parseFloat(mat.TotalPrice).toLocaleString();
+            });
+
+            item.Materials = materials; // 將材料陣列掛載到工項物件上
+        }
 
         await renderWithLayout(req, res, 'project_details', {
-            title: project.ProjectName,
-            project,
-            orders: ordersWithItems
+            title: p.ProjectName,
+            project: projectData,
+            orders: orders,
+            workItems: workItems,
+            hasWorkItems: workItems.length > 0
         });
     } catch (err) {
         console.error(err);
@@ -239,31 +347,91 @@ router.get('/projects/:id', async (req, res) => {
     }
 });
 
+// 編輯專案
+router.post('/projects/edit/:id', async (req, res) => {
+    try {
+        const projectId = req.params.id;
+        const { projectName, description, location, status, startDate, endDate, budget, clientName, clientContact } = req.body;
+        await pool.execute(`
+            UPDATE Projects SET ProjectName=?, Description=?, Location=?, Status=?, StartDate=?, EndDate=?, Budget=?, ClientName=?, ClientContact=?
+            WHERE ProjectID=?
+        `, [projectName, description, location, status, startDate, endDate, budget, clientName, clientContact, projectId]);
+        res.redirect(`/contractor/projects/${projectId}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error updating project');
+    }
+});
+
+// 刪除專案 (Transaction)
+router.post('/projects/delete/:id', async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        const projectId = req.params.id;
+        await conn.beginTransaction();
+        await conn.execute('DELETE FROM POItems WHERE POID IN (SELECT POID FROM PurchaseOrder WHERE ProjectID = ?)', [projectId]);
+        await conn.execute('DELETE FROM PurchaseOrder WHERE ProjectID = ?', [projectId]);
+        await conn.execute('DELETE FROM WorkItems WHERE ProjectID = ?', [projectId]);
+        await conn.execute('DELETE FROM Projects WHERE ProjectID = ?', [projectId]);
+        await conn.commit();
+        res.redirect('/contractor/projects');
+    } catch (err) {
+        await conn.rollback();
+        console.error("Delete Project Error:", err);
+        res.status(500).send('Error deleting project');
+    } finally {
+        conn.release();
+    }
+});
+
+// 新增工項
+router.post('/projects/:id/workitem/add', async (req, res) => {
+    try {
+        const projectId = req.params.id;
+        const { name, description, status, estimatedCost, startDate, endDate, notes } = req.body;
+        await pool.execute(
+            `INSERT INTO WorkItems (ProjectID, Name, Description, Status, EstimatedCost, StartDate, EndDate, Notes) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [projectId, name, description, status, estimatedCost || 0, startDate, endDate, notes]
+        );
+        res.redirect(`/contractor/projects/${projectId}`);
+    } catch (err) {
+        console.error("Add Work Item Error:", err);
+        res.status(500).send('Error adding work item');
+    }
+});
+
+// 刪除工項
+router.post('/projects/:projectId/workitem/delete/:workItemId', async (req, res) => {
+    try {
+        const { projectId, workItemId } = req.params;
+        await pool.execute('DELETE FROM WorkItems WHERE WorkItemID = ?', [workItemId]);
+        res.redirect(`/contractor/projects/${projectId}`);
+    } catch (err) {
+        console.error("Delete Work Item Error:", err);
+        res.status(500).send('Error deleting work item');
+    }
+});
+
 // ==========================================
-// 5. Create PO (選擇供應商，支援搜尋)
+// 5. Create PO (選擇供應商) - 更新版
 // ==========================================
 router.get('/projects/:id/create-po', async (req, res) => {
     try {
         const projectId = req.params.id;
         const searchQuery = req.query.q || '';
         const searchType = req.query.type || 'supplier';
-        
-        // 1. 獲取專案資訊
+        // ★★★ 1. 接收 workItemId ★★★
+        const workItemId = req.query.workItemId;
+
         const [projectRows] = await pool.execute('SELECT * FROM Projects WHERE ProjectID = ?', [projectId]);
 
         let sql = 'SELECT * FROM Suppliers';
         let params = [];
 
-        // ★★★ 搜尋邏輯 (與 Suppliers 列表相同) ★★★
         if (searchQuery) {
             if (searchType === 'material') {
-                sql = `
-                    SELECT DISTINCT S.*, M.MaterialName as MatchedMaterial
-                    FROM Suppliers S
-                    JOIN SupplierMaterial SM ON S.SupplierID = SM.SupplierID
-                    JOIN Materials M ON SM.MaterialID = M.MaterialID
-                    WHERE M.MaterialName LIKE ?
-                `;
+                sql = `SELECT DISTINCT S.*, M.MaterialName as MatchedMaterial FROM Suppliers S JOIN SupplierMaterial SM ON S.SupplierID = SM.SupplierID JOIN Materials M ON SM.MaterialID = M.MaterialID WHERE M.MaterialName LIKE ?`;
                 params = [`%${searchQuery}%`];
             } else {
                 sql = 'SELECT * FROM Suppliers WHERE SupplierName LIKE ?';
@@ -272,23 +440,31 @@ router.get('/projects/:id/create-po', async (req, res) => {
         }
 
         const [suppliers] = await pool.execute(sql, params);
-        
         const suppliersFixed = suppliers.map(s => ({
             ...s,
             CompanyName: s.SupplierName || s.Name || s.CompanyName,
             CompanyID: s.SupplierID,
-            MatchedMaterial: s.MatchedMaterial || null 
+            MatchedMaterial: s.MatchedMaterial || null
         }));
-        
+
+        // ★★★ 2. 如果有 workItemId，取得其名稱以便顯示 ★★★
+        let activeWorkItemName = '';
+        if (workItemId) {
+             const [wiRows] = await pool.execute('SELECT Name FROM WorkItems WHERE WorkItemID = ?', [workItemId]);
+             if (wiRows.length > 0) activeWorkItemName = wiRows[0].Name;
+        }
+
         await renderWithLayout(req, res, 'create_po', {
             title: 'Select Supplier',
             project: projectRows[0],
             suppliers: suppliersFixed,
-            // 傳遞搜尋狀態
             searchQuery,
             searchType: searchType === 'material' ? 'Material' : 'Supplier Name',
             isTypeSupplier: searchType === 'supplier',
-            isTypeMaterial: searchType === 'material'
+            isTypeMaterial: searchType === 'material',
+            // ★★★ 3. 傳遞給 View ★★★
+            workItemId,
+            activeWorkItemName 
         });
     } catch (err) {
         console.error(err);
@@ -297,51 +473,52 @@ router.get('/projects/:id/create-po', async (req, res) => {
 });
 
 // ==========================================
-// 7. Supplier Details & Shopping Page
+// 6. Supplier Details & Shopping Page (更新：支援工項選擇)
 // ==========================================
 router.get('/supplier/:id', async (req, res) => {
     try {
         const supplierId = req.params.id;
         const contractorId = req.signedCookies.userId;
-        
-        // 抓取網址參數中的 projectId
-        const preSelectedProjectId = req.query.projectId; 
 
-        // 1. 獲取供應商詳細資料
+        const preSelectedProjectId = req.query.projectId;
+        const preSelectedWorkItemId = req.query.workItemId;
+        const searchQuery = req.query.q || '';
+
         const [supplierRows] = await pool.execute('SELECT * FROM Suppliers WHERE SupplierID = ?', [supplierId]);
         const supplier = supplierRows[0];
 
-        if (!supplier) {
-            return res.redirect('/contractor/suppliers');
-        }
+        if (!supplier) return res.redirect('/contractor/suppliers');
 
-        // 2. 獲取該供應商販售的材料
-        const [materials] = await pool.execute(`
+        let sql = `
             SELECT M.MaterialID, M.MaterialName, U.UnitName, C.CategoryName, SM.PricePerUnit, SM.AvailableStock
             FROM SupplierMaterial SM
             JOIN Materials M ON SM.MaterialID = M.MaterialID
             LEFT JOIN Units U ON M.UnitID = U.UnitID
             LEFT JOIN Categories C ON M.CategoryID = C.CategoryID
             WHERE SM.SupplierID = ?
-        `, [supplierId]);
+        `;
+        let params = [supplierId];
 
-        // 3. 獲取承包商的進行中專案
+        if (searchQuery) {
+            sql += ' AND (M.MaterialName LIKE ? OR C.CategoryName LIKE ?)';
+            params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+        }
+
+        const [materials] = await pool.execute(sql, params);
+
         const [projects] = await pool.execute(
-            'SELECT ProjectID, ProjectName FROM Projects WHERE ContractorID = ? AND Status != "Completed"', 
+            'SELECT ProjectID, ProjectName FROM Projects WHERE ContractorID = ? AND Status != "Completed"',
             [contractorId]
         );
 
-        // 處理預設選中專案
         const projectsWithSelection = projects.map(p => ({
             ...p,
             isSelected: (p.ProjectID == preSelectedProjectId)
         }));
 
-        // 準備資料給前端
         const supplierData = {
-            ...supplier, // 這會包含 Address, Email, PhoneNumber 等原始欄位
-            CompanyName: supplier.SupplierName || supplier.Name, 
-            // ★★★ 確保電話和 Email 有預設值 ★★★
+            ...supplier,
+            CompanyName: supplier.SupplierName || supplier.Name,
             PhoneNumber: supplier.PhoneNumber || 'N/A',
             Email: supplier.Email || 'N/A',
             items: materials.map(m => ({
@@ -354,10 +531,22 @@ router.get('/supplier/:id', async (req, res) => {
             }))
         };
 
+        // ★★★ 新增：撈取所有專案的工項，供前端下拉選單連動使用 ★★★
+        const [allWorkItems] = await pool.execute(`
+            SELECT WorkItemID, ProjectID, Name 
+            FROM WorkItems 
+            WHERE ProjectID IN (SELECT ProjectID FROM Projects WHERE ContractorID = ?)
+            ORDER BY Name ASC
+        `, [contractorId]);
+
         await renderWithLayout(req, res, 'supplier_details', {
             title: `Purchase from ${supplierData.CompanyName}`,
             supplier: supplierData,
-            projects: projectsWithSelection
+            projects: projectsWithSelection,
+            searchQuery,
+            preSelectedProjectId,
+            preSelectedWorkItemId,
+            allWorkItemsJSON: JSON.stringify(allWorkItems) // 傳遞 JSON 給前端 JS 使用
         });
 
     } catch (err) {
@@ -366,59 +555,117 @@ router.get('/supplier/:id', async (req, res) => {
     }
 });
 
-// 處理訂單送出 (POST)
-router.post('/supplier/:id/create-order', async (req, res) => {
-    const conn = await pool.getConnection();
+// ==========================================
+// 7. Materials Catalog (材料列表)
+// ==========================================
+router.get('/materials', async (req, res) => {
     try {
-        await conn.beginTransaction();
+        const searchQuery = req.query.q || '';
+        const categoryId = req.query.category || '';
+        const { projectId, workItemId } = req.query;
 
-        const supplierId = req.params.id;
-        const contractorId = req.signedCookies.userId;
-        const { project_id, delivery_date, cart_data } = req.body;
+        const [categories] = await pool.execute('SELECT * FROM Categories');
+        const categoriesWithSelect = categories.map(c => ({ ...c, isSelected: c.CategoryID == categoryId }));
 
-        const items = JSON.parse(cart_data);
-        
-        if (!items || items.length === 0) {
-            throw new Error('Cart is empty');
+        let sql = `
+            SELECT M.MaterialID, M.MaterialName, C.CategoryName, U.UnitName, 
+                   (SELECT COUNT(*) FROM SupplierMaterial SM WHERE SM.MaterialID = M.MaterialID) as SupplierCount
+            FROM Materials M
+            LEFT JOIN Categories C ON M.CategoryID = C.CategoryID
+            LEFT JOIN Units U ON M.UnitID = U.UnitID
+            WHERE 1=1 
+        `;
+        let params = [];
+
+        if (searchQuery) {
+            sql += ' AND (M.MaterialName LIKE ? OR M.MaterialID LIKE ?)';
+            params.push(`%${searchQuery}%`, `%${searchQuery}%`);
+        }
+        if (categoryId) {
+            sql += ' AND C.CategoryID = ?';
+            params.push(categoryId);
         }
 
-        const totalAmount = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        const [materials] = await pool.execute(sql, params);
 
-        const [poResult] = await conn.execute(
-            'INSERT INTO PurchaseOrder (ContractorID, ProjectID, SupplierID, TotalAmount, Status, OrderDate) VALUES (?, ?, ?, ?, ?, NOW())',
-            [contractorId, project_id, supplierId, totalAmount, 'Pending']
-        );
-        const poId = poResult.insertId;
-
-        for (const item of items) {
-            await conn.execute(
-                'INSERT INTO POItems (POID, MaterialID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)',
-                [poId, item.id, item.qty, item.price]
-            );
+        let activeWorkItemName = '';
+        if (workItemId) {
+            const [wiRows] = await pool.execute('SELECT Name FROM WorkItems WHERE WorkItemID = ?', [workItemId]);
+            if (wiRows.length > 0) activeWorkItemName = wiRows[0].Name;
         }
 
-        await conn.commit();
-        res.redirect(`/contractor/projects/${project_id}`); 
-
+        await renderWithLayout(req, res, 'materials', {
+            title: 'Materials Catalog',
+            materials,
+            categories: categoriesWithSelect,
+            searchQuery,
+            totalCount: materials.length,
+            queryParams: { projectId, workItemId },
+            activeWorkItemName
+        });
     } catch (err) {
-        await conn.rollback();
-        console.error("Transaction Error:", err);
-        res.redirect(`/contractor/supplier/${req.params.id}?error=TransactionFailed`);
-    } finally {
-        conn.release();
+        console.error(err);
+        res.status(500).send('Server Error');
     }
 });
 
 // ==========================================
-// 8. Transaction History (Orders)
+// 8. Material Detail Page (完整版 - 包含電話信箱)
+// ==========================================
+router.get('/materials/:id', async (req, res) => {
+    try {
+        const materialId = req.params.id;
+        const { projectId, workItemId } = req.query;
+
+        const [matRows] = await pool.execute(`
+            SELECT M.*, C.CategoryName, U.UnitName 
+            FROM Materials M
+            LEFT JOIN Categories C ON M.CategoryID = C.CategoryID
+            LEFT JOIN Units U ON M.UnitID = U.UnitID
+            WHERE M.MaterialID = ?
+        `, [materialId]);
+
+        if (matRows.length === 0) return res.redirect('/contractor/materials');
+        const material = matRows[0];
+
+        // ★★★ 修正 SQL：加入 S.PhoneNumber, S.Email 以及 S.Description 欄位 ★★★
+        const [suppliers] = await pool.execute(`
+            SELECT S.SupplierID, S.SupplierName, S.Address, S.Rating, S.PhoneNumber, S.Email, S.Description,
+                   SM.PricePerUnit, SM.AvailableStock
+            FROM SupplierMaterial SM
+            JOIN Suppliers S ON SM.SupplierID = S.SupplierID
+            WHERE SM.MaterialID = ?
+            ORDER BY SM.PricePerUnit ASC
+        `, [materialId]);
+
+        const suppliersWithMeta = suppliers.map(s => ({
+            ...s,
+            TargetMatName: material.MaterialName,
+            TargetMatID: material.MaterialID
+        }));
+
+        await renderWithLayout(req, res, 'material_details', {
+            title: material.MaterialName,
+            material,
+            suppliers: suppliersWithMeta,
+            hasSuppliers: suppliers.length > 0,
+            projectId,
+            workItemId
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/materials');
+    }
+});
+
+// ==========================================
+// 9. Transaction History (Orders)
 // ==========================================
 router.get('/orders', async (req, res) => {
     try {
         const contractorId = req.signedCookies.userId;
         
-        // ★★★ 修正重點：過濾掉舊的歷史訂單 ★★★
-        // 舊的 CSV 匯入資料通常沒有 ProjectID (為 NULL)
-        // 我們透過 JOIN Projects (Inner Join) 來只選取「有專案連結」的訂單，也就是您 App 內新增的訂單
         const sql = `
             SELECT PO.*, S.SupplierName as SupplierName, P.ProjectName
             FROM PurchaseOrder PO
@@ -445,8 +692,8 @@ router.get('/orders', async (req, res) => {
             });
         });
 
-        await renderWithLayout(req, res, 'contractor_transactions', {
-            title: 'Orders',
+        await renderWithLayout(req, res, 'orders', { 
+            title: 'My Orders',
             groups: Object.values(groups)
         });
 
@@ -454,6 +701,217 @@ router.get('/orders', async (req, res) => {
         console.error(err);
         res.redirect('/contractor/dashboard');
     }
+});
+
+// ==========================================
+// 10. Notifications Center
+// ==========================================
+router.get('/notifications', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const [notifications] = await pool.execute(
+            'SELECT * FROM Notifications WHERE ContractorID = ? ORDER BY CreatedAt DESC', 
+            [contractorId]
+        );
+
+        const formattedNotifications = notifications.map(n => ({
+            ...n,
+            Time: n.CreatedAt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        }));
+
+        await renderWithLayout(req, res, 'notifications', {
+            title: 'Notifications',
+            notifications: formattedNotifications
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/dashboard');
+    }
+});
+
+router.get('/notifications/read/:id', async (req, res) => {
+    try {
+        const notificationId = req.params.id;
+        const contractorId = req.signedCookies.userId;
+        const [rows] = await pool.execute('SELECT Link FROM Notifications WHERE NotificationID = ? AND ContractorID = ?', [notificationId, contractorId]);
+        await pool.execute('UPDATE Notifications SET IsRead = 1 WHERE NotificationID = ?', [notificationId]);
+
+        if (rows.length > 0 && rows[0].Link) {
+            res.redirect(rows[0].Link);
+        } else {
+            res.redirect('/contractor/notifications');
+        }
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/notifications');
+    }
+});
+
+router.post('/notifications/mark-all-read', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        await pool.execute('UPDATE Notifications SET IsRead = 1 WHERE ContractorID = ?', [contractorId]);
+        res.redirect('/contractor/notifications');
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/notifications');
+    }
+});
+
+// ==========================================
+// 11. Edit Profile
+// ==========================================
+router.get('/profile', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const [users] = await pool.execute('SELECT * FROM Contractors WHERE ContractorID = ?', [contractorId]);
+        
+        await renderWithLayout(req, res, 'profile', {
+            title: 'Edit Profile',
+            user: users[0],
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/dashboard');
+    }
+});
+
+router.post('/profile/update', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const { name, phone, address, password, confirm_password } = req.body;
+
+        if (password && password !== confirm_password) {
+            return res.redirect('/contractor/profile?error=Passwords do not match');
+        }
+
+        let sql = 'UPDATE Contractors SET Name = ?, PhoneNumber = ?, Address = ?';
+        let params = [name, phone, address];
+
+        if (password) {
+            sql += ', Password = ?';
+            params.push(password);
+        }
+
+        sql += ' WHERE ContractorID = ?';
+        params.push(contractorId);
+
+        await pool.execute(sql, params);
+        res.cookie('username', name, { signed: true });
+        res.redirect('/contractor/profile?success=Profile updated successfully');
+
+    } catch (err) {
+        console.error(err);
+        res.redirect('/contractor/profile?error=Update failed');
+    }
+});
+
+// ==========================================
+// 12. Shopping Cart System
+// ==========================================
+
+router.post('/cart/add', (req, res) => {
+    try {
+        const { project_id, work_item_id, delivery_date, cart_data, supplier_id, supplier_name } = req.body;
+        const newItems = JSON.parse(cart_data);
+
+        let currentCart = req.signedCookies.shoppingCart || [];
+
+        const cartEntry = {
+            supplierId: supplier_id,
+            supplierName: supplier_name,
+            projectId: project_id,
+            workItemId: work_item_id || null, 
+            deliveryDate: delivery_date,
+            items: newItems,
+            addedAt: new Date()
+        };
+
+        currentCart.push(cartEntry);
+        res.cookie('shoppingCart', currentCart, { signed: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+        res.redirect('/contractor/cart');
+
+    } catch (err) {
+        console.error("Add to cart error:", err);
+        res.redirect('/contractor/suppliers');
+    }
+});
+
+router.get('/cart', async (req, res) => {
+    try {
+        let cart = req.signedCookies.shoppingCart || [];
+        let grandTotal = 0;
+        cart.forEach(entry => {
+            entry.subtotal = entry.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            grandTotal += entry.subtotal;
+        });
+
+        await renderWithLayout(req, res, 'cart', {
+            title: 'Shopping Cart',
+            cart: cart,
+            grandTotal: grandTotal,
+            hasItems: cart.length > 0
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Cart Error');
+    }
+});
+
+router.post('/cart/checkout', async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+        const contractorId = req.signedCookies.userId;
+        const cart = req.signedCookies.shoppingCart || [];
+
+        if (cart.length === 0) throw new Error('Cart is empty');
+
+        for (const entry of cart) {
+            const totalAmount = entry.items.reduce((sum, item) => sum + (parseFloat(item.price) * parseInt(item.qty)), 0);
+
+            const [poResult] = await conn.execute(
+                'INSERT INTO PurchaseOrder (ContractorID, ProjectID, WorkItemID, SupplierID, TotalAmount, Status, OrderDate) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+                [contractorId, entry.projectId, entry.workItemId, entry.supplierId, totalAmount, 'Pending']
+            );
+            const poId = poResult.insertId;
+
+            for (const item of entry.items) {
+                await conn.execute(
+                    'INSERT INTO POItems (POID, MaterialID, Quantity, UnitPrice) VALUES (?, ?, ?, ?)',
+                    [poId, item.id, parseInt(item.qty), parseFloat(item.price)]
+                );
+            }
+
+            try {
+                await conn.execute(
+                    'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                    [contractorId, 'Order Placed', `Order #${poId} to ${entry.supplierName} has been confirmed.`, `/contractor/orders`]
+                );
+            } catch (notifErr) {
+                console.warn("Notification failed:", notifErr.message);
+            }
+        }
+
+        await conn.commit();
+        res.clearCookie('shoppingCart');
+        res.redirect('/contractor/orders?success=CheckoutComplete');
+
+    } catch (err) {
+        await conn.rollback();
+        console.error("Checkout Error:", err);
+        res.redirect('/contractor/cart?error=TransactionFailed');
+    } finally {
+        conn.release();
+    }
+});
+
+router.get('/cart/clear', (req, res) => {
+    res.clearCookie('shoppingCart');
+    res.redirect('/contractor/cart');
 });
 
 module.exports = router;

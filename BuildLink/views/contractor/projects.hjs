@@ -1,98 +1,167 @@
 <div class="space-y-6">
     <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold text-slate-800">My Projects</h2>
-        <!-- Trigger Modal -->
-        <button onclick="document.getElementById('addProjectModal').classList.remove('hidden')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors">
+        <button onclick="document.getElementById('addProjectModal').classList.remove('hidden')" 
+                class="px-4 py-2 bg-[#D4A5A5] text-white rounded-lg hover:bg-[#C9A0A0] flex items-center gap-2 transition-colors shadow-sm">
             <i data-lucide="plus" class="w-4 h-4"></i>
             <span>New Project</span>
         </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {{#projects}}
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h3 class="text-xl font-bold text-slate-800">{{ProjectName}}</h3>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                            {{Status}}
-                        </span>
+        <div class="group bg-white rounded-2xl shadow-sm border border-[#E8C5C5] p-6 hover:shadow-md transition-all relative">
+            <a href="/contractor/projects/{{ProjectID}}" class="absolute inset-0 z-0"></a>
+
+            <div class="flex justify-between items-start mb-4 relative z-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-[#FFF5F5] flex items-center justify-center text-[#D4A5A5]">
+                        <i data-lucide="folder" class="w-5 h-5"></i>
                     </div>
+                    <h3 class="text-lg font-bold text-slate-800 group-hover:text-[#D4A5A5] transition-colors">{{ProjectName}}</h3>
                 </div>
-                <div class="p-2 bg-slate-50 rounded-lg text-slate-500">
-                     <i data-lucide="clipboard" class="w-5 h-5"></i>
-                </div>
+                <span class="px-2.5 py-1 rounded-lg text-xs font-medium border {{StatusClass}}">
+                    {{StatusLabel}}
+                </span>
             </div>
             
-            <div class="space-y-3 text-sm text-slate-500 mb-6">
+            <div class="space-y-2 text-sm text-slate-500 mb-6 pl-1">
                 <div class="flex items-center gap-2">
-                    <i data-lucide="map-pin" class="w-4 h-4 text-slate-400"></i> 
+                    <i data-lucide="map-pin" class="w-4 h-4 text-[#D4A5A5]"></i> 
                     {{Location}}
                 </div>
                 <div class="flex items-center gap-2">
-                    <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i> 
-                    Start: {{StartDate}}
+                    <i data-lucide="calendar" class="w-4 h-4 text-[#D4A5A5]"></i> 
+                    {{FormattedStartDate}}
                 </div>
             </div>
 
-            <div class="pt-4 border-t border-slate-100 flex justify-end">
-                <a href="/contractor/projects/{{ProjectID}}" class="text-blue-600 font-medium hover:text-blue-700 text-sm flex items-center gap-1">
-                    Manage Project <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </a>
+            <div class="border-t border-slate-100 my-4"></div>
+
+            <div class="space-y-2">
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="text-slate-600 font-medium">Budget Usage</span>
+                    <span class="text-slate-900 font-bold">{{ProgressPercent}}%</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div class="bg-[#D4A5A5] h-2 rounded-full transition-all duration-500" style="width: {{ProgressPercent}}%"></div>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400 mt-1">
+                    <span>Spent: ${{FormattedSpent}}</span>
+                    <span>Total: ${{FormattedBudget}}</span>
+                </div>
             </div>
         </div>
         {{/projects}}
 
         {{^projects}}
-        <div class="col-span-full p-8 text-center bg-white rounded-xl border border-dashed border-slate-300">
-            <div class="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
-                <i data-lucide="folder-open" class="w-6 h-6"></i>
+        <div class="col-span-full p-12 text-center bg-white rounded-2xl border border-dashed border-[#E8C5C5]">
+            <div class="mx-auto w-16 h-16 bg-[#FFF5F5] rounded-2xl flex items-center justify-center text-[#D4A5A5] mb-4">
+                <i data-lucide="folder-open" class="w-8 h-8"></i>
             </div>
-            <h3 class="text-lg font-medium text-slate-900">No projects yet</h3>
-            <p class="text-slate-500 mt-1">Get started by creating a new project.</p>
+            <h3 class="text-lg font-bold text-slate-800">No Projects Yet</h3>
+            <p class="text-slate-500 mt-1 mb-6">Create your first project to get started.</p>
+            <button onclick="document.getElementById('addProjectModal').classList.remove('hidden')" 
+                    class="px-6 py-2 bg-[#D4A5A5] text-white rounded-lg hover:bg-[#C9A0A0] inline-flex items-center gap-2 transition-colors">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Create Project</span>
+            </button>
         </div>
         {{/projects}}
     </div>
 </div>
 
-<!-- Modal (Tailwind version) -->
 <div id="addProjectModal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="fixed inset-0 bg-slate-900/50 transition-opacity backdrop-blur-sm"></div>
+    <div class="fixed inset-0 bg-slate-900/40 transition-opacity backdrop-blur-sm"></div>
+    
     <div class="fixed inset-0 z-10 overflow-y-auto">
-        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-            <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+        <div class="flex min-h-full items-center justify-center p-4 text-center">
+            <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all w-full max-w-2xl">
                 
-                <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                            <i data-lucide="folder-plus" class="w-5 h-5 text-blue-600"></i>
+                <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-slate-800">Create New Project</h3>
+                    <button onclick="document.getElementById('addProjectModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <form id="addProjectForm" action="/contractor/projects/add" method="POST">
+                    <div class="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Project Name <span class="text-red-500">*</span></label>
+                            <input type="text" name="projectName" required 
+                                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none transition-all">
                         </div>
-                        <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-lg font-semibold leading-6 text-slate-900" id="modal-title">Create New Project</h3>
-                            <div class="mt-4">
-                                <form id="addProjectForm" action="/contractor/projects/add" method="POST" class="space-y-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 mb-1">Project Name</label>
-                                        <input type="text" name="projectName" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="e.g. City Center Renovation">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                                        <input type="text" name="location" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
-                                        <input type="date" name="startDate" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                                    </div>
-                                </form>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                            <textarea name="description" rows="3"
+                                      class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none transition-all resize-none"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                                <input type="text" name="location" required 
+                                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                                <select name="status" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none bg-white">
+                                    <option value="Planning">Planning</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="On Hold">On Hold</option>
+                                </select>
                             </div>
                         </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
+                                <input type="date" name="startDate" required 
+                                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">End Date</label>
+                                <input type="date" name="endDate" 
+                                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Budget</label>
+                                <input type="number" name="budget" min="0" step="1000"
+                                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Client Name</label>
+                                <input type="text" name="clientName"
+                                       class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Client Contact</label>
+                            <input type="text" name="clientContact" 
+                                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 focus:border-[#D4A5A5] focus:ring-1 focus:ring-[#D4A5A5] outline-none">
+                        </div>
+
                     </div>
-                </div>
-                <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                    <button type="submit" form="addProjectForm" class="inline-flex w-full justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto">Create Project</button>
-                    <button type="button" onclick="document.getElementById('addProjectModal').classList.add('hidden')" class="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 sm:mt-0 sm:w-auto">Cancel</button>
-                </div>
+
+                    <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 rounded-b-2xl border-t border-slate-100">
+                        <button type="button" onclick="document.getElementById('addProjectModal').classList.add('hidden')" 
+                                class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 font-medium transition-colors text-sm">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-2 bg-[#D4A5A5] text-white rounded-lg hover:bg-[#C9A0A0] font-medium transition-colors text-sm shadow-sm">
+                            Create Project
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

@@ -17,13 +17,13 @@ graph TD
     Root[Build Link]:::root --> ForgetPW("Forget Password<br/>(Shing.Rong.Lee)"):::mvp
 
     %% Login Downstream
-    Login --> EditProfile("Edit Profile<br/>(Shing.Rong.Lee)"):::exp_missing
+    Login --> EditProfile("Edit Profile<br/>(Shing.Rong.Lee)"):::exp
     Login --> Dashboard("Dashboard<br/>(Wan.Zhen.HSU)"):::mvp
     Login --> Projects("Projects<br/>(Wan.Zhen.HSU)"):::mvp
 
     %% --- 分流入口 ---
     Login --> Suppliers("Suppliers<br/>(Wan.Zhen.HSU)"):::mvp
-    Login --> Materials("Materials<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    Login --> Materials("Materials<br/>(Wan.Zhen.HSU)"):::mvp
     Login --> TransHistory("Transaction History<br/>(Wan.Zhen.HSU)"):::exp
 
     %% 新增：通知中心
@@ -37,19 +37,19 @@ graph TD
     Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp_missing
 
     %% History Procurement Branch
-    TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp
+    TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp_missing
     OrderDetail -.-> Invoice
 
     %% Projects Branch
     Projects --> ManageProject("Manage Project<br/>(Wan.Zhen.HSU)"):::mvp
     Projects --> AddProject("Add Project<br/>(Wan.Zhen.HSU)"):::mvp
 
-    ManageProject --> WorkItem("Work Item<br/>(Zhafran)"):::mvp_missing
+    ManageProject --> WorkItem("Work Item<br/>(Wan.Zhen.HSU)"):::mvp
 
-    %% 專案細節流程 (需新增邏輯)
-    WorkItem --> ItemStatus("Item Status<br/>(Zhafran)"):::exp_missing
-    WorkItem --> ItemMaterial("Item Material<br/>(Zhafran)"):::mvp_missing
-    ItemMaterial --> MaterialStatus("Material Status<br/>(Zhafran)"):::exp_missing
+    %% 專案細節流程
+    WorkItem --> ItemStatus("Item Status<br/>(Wan.Zhen.HSU)"):::exp
+    WorkItem --> ItemMaterial("Item Material<br/>(Wan.Zhen.HSU)"):::mvp
+    ItemMaterial --> MaterialStatus("Material Status<br/>(Shing.Rong.Lee)"):::exp_missing
 
     %% 專案需求 -> 找供應商
     WorkItem -- "Need Sourcing" --> PurchaseOrderReq("Purchase Request<br/>(Wan.Zhen.HSU)"):::mvp
@@ -57,16 +57,16 @@ graph TD
 
     %% --- 核心修改：搜尋與目錄邏輯分流 ---
 
-    %% Path A: Suppliers (Suppliers.hjs 已有，但缺少功能)
+    %% Path A: Suppliers
     Suppliers --> SupSearch("Search Suppliers<br/>(List View)<br/>(Wan.Zhen.HSU)"):::mvp
     SupSearch --> Message("Message Supplier<br/>(Zhafran)"):::exp_missing
 
-    SupSearch -- "Click Supplier" --> SupDetail("Supplier Detail Page<br/>(Info + Material List)<br/>(Wan.Zhen.HSU)"):::mvp_missing
-    SupDetail --> Material("Select Material & Qty<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    SupSearch -- "Click Supplier" --> SupDetail("Supplier Detail Page<br/>(Info + Material List)<br/>(Wan.Zhen.HSU)"):::mvp
+    SupDetail --> Material("Select Material & Qty<br/>(Wan.Zhen.HSU)"):::mvp
 
-    %% Path B: Materials (完全缺失)
-    Materials --> MatSearch("Search Materials<br/>(Keyword/Category)<br/>(Wan.Zhen.HSU)"):::mvp_missing
-    MatSearch -- "Click Item" --> MatDetail("Material Detail<br/>(Info + Supplier Card)<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    %% Path B: Materials
+    Materials --> MatSearch("Search Materials<br/>(Keyword/Category)<br/>(Wan.Zhen.HSU)"):::mvp
+    MatSearch -- "Click Item" --> MatDetail("Material Detail<br/>(Info + Supplier Card)<br/>(Wan.Zhen.HSU)"):::mvp
 
     %% Materials 路徑的連結
     MatDetail --> Material
@@ -76,14 +76,14 @@ graph TD
     SupDetail -- "Save Supplier" --> Wishlist("Wishlist/Favorites<br/>(Zhafran)"):::exp_missing
     MatDetail -- "Save Material" --> Wishlist
 
-    %% Order Configuration (缺失)
-    Material --> OrderConfig("Order Configuration<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    %% Order Configuration
+    Material --> OrderConfig("Order Configuration<br/>(Wan.Zhen.HSU)"):::mvp
 
     %% Order & Logistics Flow
-    OrderConfig --> Cart("購物車 & Order<br/>(Wan.Zhen.HSU)"):::mvp_missing
+    OrderConfig --> Cart("購物車 & Order<br/>(Wan.Zhen.HSU)"):::mvp
 
-    %% 結帳流程 (缺失)
-    Cart --> Checkout("Checkout/Confirm<br/>(Wan.Zhen.HSU)"):::exp_missing
+    %% 結帳流程
+    Cart --> Checkout("Checkout/Confirm<br/>(Wan.Zhen.HSU)"):::exp
 
     Checkout --> Logistics("物流 Status<br/>(Zhafran)"):::exp_missing
 
