@@ -1,7 +1,7 @@
 --import--
-docker cp C:\Users\417\Desktop\營建資訊系統之軟體工程\companies.tsv assignment_wan :/var/lib/mysql-files/
-docker cp C:\Users\417\Desktop\營建資訊系統之軟體工程\materials.tsv assignment_wan :/var/lib/mysql-files/
-docker cp C:\Users\417\Desktop\營建資訊系統之軟體工程\transactions.tsv assignment_wan :/var/lib/mysql-files/
+docker cp C:\Users\mi861\Team4\BuildLink\DB清理\companies.tsv assignment_wan:/var/lib/mysql-files/
+docker cp C:\Users\mi861\Team4\BuildLink\DB清理\materials.tsv assignment_wan:/var/lib/mysql-files/
+docker cp C:\Users\mi861\Team4\BuildLink\DB清理\transactions.tsv assignment_wan:/var/lib/mysql-files/
 
 -- --
 docker run --name assignment_wan -p 3306:3306 --env "MYSQL_ROOT_PASSWORD=417" --detach mysql:latest
@@ -117,7 +117,7 @@ FROM materials
 GROUP BY material_id
 HAVING COUNT(*) > 1;
 
-Drop TABLE categories,final_materials;
+
 
 
 -- 4. 建立 Categories (類別) 表格
@@ -186,8 +186,7 @@ FROM companies;
 INSERT INTO final_materials (material_id, Item, unit_id, category_id, PriceAvg, PriceStdev, NoSample)
 SELECT
     m.material_id,    
-    -- 修正 4: 移除 "Products." 和 "Products: " 前綴
-    TRIM(REPLACE(REPLACE(MAX(m.Item), 'Products. ', ''), 'Products: ', '')) AS Item,    
+        TRIM(REPLACE(REPLACE(MAX(m.Item), 'Products. ', ''), 'Products: ', '')) AS Item,    
     MAX(u.unit_id) AS unit_id,
     (CASE
         -- 類別: 品質檢驗標準 (最優先)
@@ -301,8 +300,6 @@ WHERE
     EXISTS (SELECT 1 FROM final_companies c WHERE c.company_id = st.company_id)
     AND EXISTS (SELECT 1 FROM final_materials m WHERE m.material_id = st.material_id)
     AND st.transaction_date >= '2000-01-01';
-
-;
 
 -- 13. 填充 final_transactions 表格 (最終強化版)
 -- (包含了 ID 檢查、日期檢查、以及你提議的「價格有效性」檢查)
