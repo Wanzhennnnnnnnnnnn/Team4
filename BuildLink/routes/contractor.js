@@ -87,9 +87,13 @@ router.get('/dashboard', async (req, res) => {
             ORDER BY PO.OrderDate DESC LIMIT 5
         `, [contractorId]);
 
-        // 5. Top Suppliers
+        // 5. Top Suppliers - Display top 3 suppliers by rating (global)
         const [topSuppliers] = await pool.execute(`
-            SELECT * FROM Suppliers LIMIT 3
+            SELECT SupplierID, SupplierName, Description, Rating
+            FROM Suppliers
+            WHERE Rating > 0.00
+            ORDER BY Rating DESC, SupplierName ASC
+            LIMIT 3
         `);
 
         await renderWithLayout(req, res, 'dashboard', {
