@@ -135,9 +135,11 @@ ADD COLUMN WorkItemID INT,
 ADD CONSTRAINT fk_po_workitem FOREIGN KEY (WorkItemID) REFERENCES WorkItems(WorkItemID) ON DELETE SET NULL;
 
 -- 11.新增欄位 (工項關聯、物流單號、預計抵達日)
-ALTER TABLE PurchaseOrder ADD COLUMN WorkItemID INT DEFAULT NULL;
-ALTER TABLE PurchaseOrder ADD COLUMN TrackingNumber VARCHAR(50) DEFAULT NULL;
-ALTER TABLE PurchaseOrder ADD COLUMN EstimatedArrival DATE DEFAULT NULL;
+ALTER TABLE PurchaseOrder 
+ADD COLUMN WorkItemID INT DEFAULT NULL,
+ADD COLUMN TrackingNumber VARCHAR(50) DEFAULT NULL,
+ADD COLUMN EstimatedArrival DATE DEFAULT NULL;
 
 -- 12. 建立工項的外鍵關聯
-ALTER TABLE PurchaseOrder ADD CONSTRAINT PurchaseOrder_ibfk_4 FOREIGN KEY (WorkItemID) REFERENCES WorkItems (WorkItemID);
+ALTER TABLE PurchaseOrder 
+ADD CONSTRAINT PurchaseOrder_ibfk_4 FOREIGN KEY (WorkItemID) REFERENCES WorkItems (WorkItemID);
