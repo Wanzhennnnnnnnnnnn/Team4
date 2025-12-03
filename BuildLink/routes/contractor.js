@@ -351,15 +351,40 @@ router.get('/projects/:id', async (req, res) => {
     }
 });
 
-// 編輯專案
+// 編輯專案 (包含狀態變更通知)
 router.post('/projects/edit/:id', async (req, res) => {
     try {
         const projectId = req.params.id;
+        const contractorId = req.signedCookies.userId; // ★ 取得使用者 ID
         const { projectName, description, location, status, startDate, endDate, budget, clientName, clientContact } = req.body;
+
+        // 1. 先抓取舊的狀態，用來比對是否有改變
+        const [oldRows] = await pool.execute('SELECT Status FROM Projects WHERE ProjectID = ?', [projectId]);
+        const oldStatus = oldRows.length > 0 ? oldRows[0].Status : null;
+
+        // 2. 執行更新
         await pool.execute(`
             UPDATE Projects SET ProjectName=?, Description=?, Location=?, Status=?, StartDate=?, EndDate=?, Budget=?, ClientName=?, ClientContact=?
             WHERE ProjectID=?
         `, [projectName, description, location, status, startDate, endDate, budget, clientName, clientContact, projectId]);
+
+        // 3. ★★★ 偵測狀態改變並發送通知 ★★★
+        if (oldStatus && oldStatus !== status) {
+            try {
+                await pool.execute(
+                    'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                    [
+                        contractorId, 
+                        'Project Status Update', 
+                        `Project "${projectName}" status has changed from "${oldStatus}" to "${status}".`, 
+                        `/contractor/projects/${projectId}`
+                    ]
+                );
+            } catch (e) { 
+                console.warn("Notification Error:", e.message); 
+            }
+        }
+
         res.redirect(`/contractor/projects/${projectId}`);
     } catch (err) {
         console.error(err);
