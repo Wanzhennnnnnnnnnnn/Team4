@@ -232,7 +232,7 @@ router.post('/projects/add', async (req, res) => {
             [contractorId, projectName, description, location, status, startDate, endDate, budget || 0, clientName, clientContact]
         );
 
-        // ★★★ 新增：建立專案時發送通知 ★★★
+        // 建立專案時發送通知
         try {
             await pool.execute(
                 'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
@@ -351,16 +351,19 @@ router.get('/projects/:id', async (req, res) => {
     }
 });
 
-// 編輯專案 (包含狀態變更通知)
+// ==========================================
+// ★★★ 編輯專案 (包含狀態變更通知) ★★★
+// ==========================================
 router.post('/projects/edit/:id', async (req, res) => {
     try {
         const projectId = req.params.id;
-        const contractorId = req.signedCookies.userId; // ★ 取得使用者 ID
+        const contractorId = req.signedCookies.userId;
         const { projectName, description, location, status, startDate, endDate, budget, clientName, clientContact } = req.body;
 
         // 1. 先抓取舊的狀態，用來比對是否有改變
-        const [oldRows] = await pool.execute('SELECT Status FROM Projects WHERE ProjectID = ?', [projectId]);
+        const [oldRows] = await pool.execute('SELECT ProjectName, Status FROM Projects WHERE ProjectID = ?', [projectId]);
         const oldStatus = oldRows.length > 0 ? oldRows[0].Status : null;
+        const oldName = oldRows.length > 0 ? oldRows[0].ProjectName : projectName;
 
         // 2. 執行更新
         await pool.execute(`
@@ -368,7 +371,7 @@ router.post('/projects/edit/:id', async (req, res) => {
             WHERE ProjectID=?
         `, [projectName, description, location, status, startDate, endDate, budget, clientName, clientContact, projectId]);
 
-        // 3. ★★★ 偵測狀態改變並發送通知 ★★★
+        // 3. 偵測狀態改變並發送通知
         if (oldStatus && oldStatus !== status) {
             try {
                 await pool.execute(
@@ -376,7 +379,7 @@ router.post('/projects/edit/:id', async (req, res) => {
                     [
                         contractorId, 
                         'Project Status Update', 
-                        `Project "${projectName}" status has changed from "${oldStatus}" to "${status}".`, 
+                        `Project "${oldName}" status has changed from "${oldStatus}" to "${status}".`, 
                         `/contractor/projects/${projectId}`
                     ]
                 );
@@ -425,7 +428,7 @@ router.post('/projects/:id/workitem/add', async (req, res) => {
             [projectId, name, description, status, estimatedCost || 0, startDate, endDate, notes]
         );
 
-        // ★★★ 新增：建立工項時發送通知 ★★★
+        // 新增工項時發送通知
         try {
             await pool.execute(
                 'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
@@ -694,14 +697,14 @@ router.get('/materials/:id', async (req, res) => {
 });
 
 // ==========================================
-// 9. Transaction History (Orders) - ★★★ 修改版：支援專案篩選與進度條 ★★★
+// 9. Transaction History (Orders) - ★★★ 支援專案篩選與進度條 ★★★
 // ==========================================
 router.get('/orders', async (req, res) => {
     try {
         const contractorId = req.signedCookies.userId;
         const filterProjectId = req.query.projectId; // 取得前端傳來的篩選條件
         
-        // 1. 取得專案列表 (修正：使用 StartDate 排序)
+        // 1. 取得專案列表 (用 StartDate 排序，避免 CreatedAt 不存在)
         const [projects] = await pool.execute(
             'SELECT ProjectID, ProjectName FROM Projects WHERE ContractorID = ? ORDER BY StartDate DESC',
             [contractorId]
@@ -713,7 +716,7 @@ router.get('/orders', async (req, res) => {
             selected: (p.ProjectID == filterProjectId) ? 'selected' : ''
         }));
 
-        // 2. 準備訂單查詢 SQL
+        // 2. 準備訂單查詢 SQL (加入 TrackingNumber, EstimatedArrival)
         let sql = `
             SELECT PO.*, S.SupplierName as SupplierName, P.ProjectName
             FROM PurchaseOrder PO
@@ -749,8 +752,8 @@ router.get('/orders', async (req, res) => {
             const progress = getProgress(t.Status);
             return {
                 ...t,
-                FormattedDate: t.OrderDate.toISOString().split('T')[0],
-                FormattedArrival: t.EstimatedArrival ? t.EstimatedArrival.toISOString().split('T')[0] : 'TBD',
+                FormattedDate: t.OrderDate.toISOString().split('T')[0], // 訂單日期
+                FormattedArrival: t.EstimatedArrival ? t.EstimatedArrival.toISOString().split('T')[0] : 'TBD', // 預計抵達
                 ProgressWidth: progress.width,
                 CurrentStep: progress.step,
                 IsPending: t.Status === 'Pending',
@@ -775,7 +778,7 @@ router.get('/orders', async (req, res) => {
 });
 
 // ==========================================
-// ★★★ 新增：模擬物流狀態推進 (Demo 用) + 通知功能 ★★★
+// ★★★ 模擬物流狀態推進 (Demo 用) + 通知功能 ★★★
 // ==========================================
 router.post('/orders/:id/simulate-status', async (req, res) => {
     try {
@@ -820,7 +823,7 @@ router.post('/orders/:id/simulate-status', async (req, res) => {
 
         await pool.execute(sql, params);
 
-        // ★★★ 新增：物流狀態變更時發送通知 ★★★
+        // ★★★ 物流狀態變更時發送通知 ★★★
         if (nextStatus !== currentStatus) {
             try {
                 await pool.execute(
