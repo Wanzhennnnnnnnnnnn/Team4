@@ -143,3 +143,17 @@ ADD COLUMN EstimatedArrival DATE DEFAULT NULL;
 -- 12. 建立工項的外鍵關聯
 ALTER TABLE PurchaseOrder 
 ADD CONSTRAINT PurchaseOrder_ibfk_4 FOREIGN KEY (WorkItemID) REFERENCES WorkItems (WorkItemID);
+
+-- 13. 建立通知資料表
+CREATE TABLE IF NOT EXISTS `Notifications` (
+  `NotificationID` int NOT NULL AUTO_INCREMENT,
+  `ContractorID` int NOT NULL,
+  `Title` varchar(255) DEFAULT NULL,
+  `Message` text,
+  `Link` varchar(255) DEFAULT NULL,
+  `IsRead` tinyint(1) DEFAULT '0',
+  `CreatedAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`NotificationID`),
+  KEY `ContractorID` (`ContractorID`),
+  CONSTRAINT `Notifications_ibfk_1` FOREIGN KEY (`ContractorID`) REFERENCES `Contractors` (`ContractorID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
