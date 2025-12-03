@@ -9,8 +9,6 @@ Thumbs.db
 
 忽略設定檔 (包含密碼)
 
-config.js
-
 忽略 Log 檔
 
 *.log
