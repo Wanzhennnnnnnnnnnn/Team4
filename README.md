@@ -27,7 +27,7 @@ graph TD
     Login --> TransHistory("Transaction History<br/>(Wan.Zhen.HSU)"):::exp
 
     %% 新增：通知中心
-    Login --> Notifications("Notification Center<br/>(Shing.Rong.Lee)"):::exp_missing
+    Login --> Notifications("Notification Center<br/>(Shing.Rong.Lee)"):::exp
 
     %% Dashboard Branch (Completed)
     Dashboard --> TotalSpend("Total Project Spend<br/>(Wan.Zhen.HSU)"):::exp
@@ -49,7 +49,7 @@ graph TD
     %% 專案細節流程
     WorkItem --> ItemStatus("Item Status<br/>(Wan.Zhen.HSU)"):::exp
     WorkItem --> ItemMaterial("Item Material<br/>(Wan.Zhen.HSU)"):::mvp
-    ItemMaterial --> MaterialStatus("Material Status<br/>(Shing.Rong.Lee)"):::exp_missing
+    ItemMaterial --> MaterialStatus("Material Status<br/>(Shing.Rong.Lee)"):::exp
 
     %% 專案需求 -> 找供應商
     WorkItem -- "Need Sourcing" --> PurchaseOrderReq("Purchase Request<br/>(Wan.Zhen.HSU)"):::mvp
