@@ -1,16 +1,13 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <div class="max-w-7xl mx-auto space-y-6">
     
-    <!-- Back Button -->
     <a href="/contractor/materials?projectId={{projectId}}&workItemId={{workItemId}}" class="inline-flex items-center text-sm text-slate-500 hover:text-blue-600 transition-colors">
         <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> Back to Catalog
     </a>
 
-    <!-- Material Header Info -->
-    <!-- ★★★ 修改：調整為更緊湊的樣式，與 Supplier Detail 類似 ★★★ -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex flex-col md:flex-row gap-5 items-center">
-        <!-- ★★★ 修改：大幅縮小圖片容器 (h-48 -> h-28, w-48 -> w-28) ★★★ -->
         <div class="w-28 h-28 bg-[#FFF5F5] rounded-xl flex items-center justify-center text-[#D4A5A5] shrink-0">
-            <!-- ★★★ 修改：調整 icon 大小 (w-16 h-16 -> w-12 h-12) ★★★ -->
             <i data-lucide="package" class="w-12 h-12"></i>
         </div>
         
@@ -26,8 +23,6 @@
                         <span class="text-slate-500 font-medium">Unit: {{material.UnitName}}</span>
                     </div>
                 </div>
-                
-                <!-- 選項：將一些重要資訊放到右側，或保持留白 -->
             </div>
             
             <p class="mt-3 text-slate-600 text-sm leading-relaxed line-clamp-2">
@@ -37,21 +32,44 @@
         </div>
     </div>
 
-    <!-- Suppliers Section Header -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="trending-up" class="w-5 h-5 text-blue-600"></i>
+                    Price Trend Analysis
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Historical price fluctuation (Last 6 Months)</p>
+            </div>
+            <span id="trendBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 animate-pulse">
+                Loading Data...
+            </span>
+        </div>
+
+        <div class="relative h-64 w-full">
+            <canvas id="priceChart"></canvas>
+        </div>
+
+        <div id="aiInsight" class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-600 flex gap-3 items-start">
+            <i data-lucide="sparkles" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5"></i>
+            <div>
+                <span class="font-semibold text-slate-800">AI Market Insight:</span>
+                <span id="aiText">Analyzing current market data to provide procurement advice...</span>
+            </div>
+        </div>
+    </div>
+
     <div class="flex items-center justify-between pt-2">
         <h2 class="text-lg font-bold text-slate-900">Available Suppliers</h2>
         <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{{suppliers.length}} found</span>
     </div>
 
-    <!-- Suppliers Grid Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {{#suppliers}}
         <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:border-[#D4A5A5] hover:shadow-[0_8px_30px_rgb(212,165,165,0.15)] transition-all duration-300 flex flex-col h-full relative group">
             
-            <!-- Card Header: Name, ID, Rating -->
             <div class="flex justify-between items-start mb-3">
                 <div class="flex items-center gap-3">
-                    <!-- Icon -->
                     <div class="w-12 h-12 rounded-xl bg-[#FFF5F5] flex items-center justify-center text-[#D4A5A5] font-bold text-lg shrink-0 group-hover:scale-110 transition-transform duration-300">
                         <i data-lucide="building-2" class="w-6 h-6"></i>
                     </div>
@@ -60,14 +78,12 @@
                         <span class="text-xs text-slate-400 font-mono">#{{SupplierID}}</span>
                     </div>
                 </div>
-                <!-- Rating Badge (Green) -->
                 <div class="flex items-center gap-1 text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
                     <i data-lucide="star" class="w-3 h-3 fill-current"></i>
                     {{Rating}}
                 </div>
             </div>
 
-            <!-- Description: 改為動態資料 -->
             <div class="mb-4 space-y-2">
                 <p class="text-slate-500 text-xs line-clamp-2 h-8">
                     {{#Description}}{{Description}}{{/Description}}{{^Description}}Professional supplier for {{../material.MaterialName}}. Certified quality and reliable delivery.{{/Description}}
@@ -80,7 +96,6 @@
                 </div>
             </div>
 
-            <!-- Contact Info -->
             <div class="space-y-2 text-xs text-slate-500 mb-4 pt-3 border-t border-slate-50">
                 <div class="flex items-center gap-2">
                     <i data-lucide="phone" class="w-3 h-3 text-slate-300 shrink-0"></i>
@@ -96,7 +111,6 @@
                 </div>
             </div>
 
-            <!-- Footer: Price & Buttons -->
             <div class="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                 <div>
                     <span class="block text-[10px] uppercase text-slate-400 font-semibold tracking-wide">Price / {{../material.UnitName}}</span>
@@ -106,14 +120,12 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <!-- View Profile -->
                     <a href="/contractor/supplier/{{SupplierID}}?projectId={{../projectId}}&workItemId={{../workItemId}}" 
                        class="w-9 h-9 flex items-center justify-center bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
                        title="View Profile">
                         <i data-lucide="user" class="w-4 h-4"></i>
                     </a>
 
-                    <!-- Add to Cart -->
                     <a href="/contractor/supplier/{{SupplierID}}?q={{TargetMatName}}&autoAdd={{TargetMatID}}&projectId={{../projectId}}&workItemId={{../workItemId}}" 
                        class="px-4 h-9 bg-[#D4A5A5] text-white text-sm font-medium rounded-lg hover:bg-[#C9A0A0] transition-colors shadow-sm flex items-center gap-2">
                         <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
@@ -134,3 +146,107 @@
         {{/suppliers}}
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    const materialId = "{{material.MaterialID}}";
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    const badge = document.getElementById('trendBadge');
+    const aiText = document.getElementById('aiText');
+
+    try {
+        // ★★★ 修正點：加上 /contractor 前綴 ★★★
+        const response = await fetch(`/contractor/api/materials/${materialId}/history`);
+        const historyData = await response.json();
+
+        // 2. 如果沒有數據
+        if (!historyData || historyData.length === 0) {
+            badge.innerText = 'No Data';
+            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500';
+            aiText.innerText = "Insufficient data to provide market analysis.";
+            return;
+        }
+
+        const labels = historyData.map(d => d.date);
+        const prices = historyData.map(d => parseFloat(d.price));
+
+        // 3. 繪製圖表
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Price (TWD)',
+                    data: prices,
+                    borderColor: '#2563eb', // Tailwind Blue-600
+                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+                    borderWidth: 2,
+                    tension: 0.4, // 平滑曲線
+                    fill: true,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#2563eb',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 12,
+                        titleFont: { size: 13 },
+                        bodyFont: { size: 13 },
+                        displayColors: false,
+                        callbacks: {
+                            label: (context) => 'Price: $' + context.parsed.y.toLocaleString()
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: { borderDash: [4, 4], color: '#f1f5f9' },
+                        ticks: { font: { size: 11 }, color: '#64748b' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, color: '#64748b' }
+                    }
+                }
+            }
+        });
+
+        // 4. AI 簡單分析邏輯
+        const currentPrice = prices[prices.length - 1];
+        const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+        const diffPercent = ((currentPrice - avgPrice) / avgPrice) * 100;
+
+        badge.classList.remove('animate-pulse');
+
+        if (diffPercent < -3) {
+            // 買入建議
+            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700';
+            badge.innerText = 'Good Value';
+            aiText.innerHTML = `Great time to buy! Current price ($${currentPrice.toLocaleString()}) is <strong class="text-emerald-600">${Math.abs(diffPercent).toFixed(1)}% lower</strong> than average.`;
+        } else if (diffPercent > 3) {
+            // 觀望建議
+            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700';
+            badge.innerText = 'Price High';
+            aiText.innerHTML = `Price is currently high ($${currentPrice.toLocaleString()}), roughly <strong class="text-amber-600">${diffPercent.toFixed(1)}% above</strong> average. Consider waiting if possible.`;
+        } else {
+            // 持平
+            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600';
+            badge.innerText = 'Stable';
+            aiText.innerHTML = `Market is stable. Current price ($${currentPrice.toLocaleString()}) is consistent with the 6-month trend.`;
+        }
+
+    } catch (err) {
+        console.error("Chart Error:", err);
+        aiText.innerText = "Unable to load price trend data.";
+        badge.innerText = 'Error';
+    }
+});
+</script>

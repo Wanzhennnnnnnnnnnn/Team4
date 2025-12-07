@@ -156,3 +156,28 @@ CREATE TABLE IF NOT EXISTS `Notifications` (
   KEY `ContractorID` (`ContractorID`),
   CONSTRAINT `Notifications_ibfk_1` FOREIGN KEY (`ContractorID`) REFERENCES `Contractors` (`ContractorID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 14.建立價格歷史表格
+-- 注意：這裡使用 CHAR(8) 是為了配合你原本 materials 表格的格式
+CREATE TABLE PriceHistory (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    material_id CHAR(8) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    recorded_at DATE NOT NULL
+);
+
+-- 15. 建立通知表格 (用於預算警告)
+CREATE TABLE Notifications (
+    NotificationID INT AUTO_INCREMENT PRIMARY KEY,
+    ContractorID INT NOT NULL,
+    Title VARCHAR(100),
+    Message TEXT,
+    Link VARCHAR(255),
+    IsRead TINYINT(1) DEFAULT 0,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ContractorID) REFERENCES Contractors(ContractorID) ON DELETE CASCADE
+);
+
+-- 16. 修改工項表格 (加入預算欄位)
+-- 如果你的 WorkItems 表原本沒有 EstimatedCost，請執行這行
+ALTER TABLE WorkItems ADD COLUMN EstimatedCost DECIMAL(10, 2) DEFAULT 0;
