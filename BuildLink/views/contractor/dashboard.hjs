@@ -1,4 +1,4 @@
-<div class="flex flex-col gap-4 h-full">
+<div class="flex flex-col gap-6 h-full">
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
         
@@ -9,16 +9,6 @@
             </div>
             <div class="w-10 h-10 rounded-lg bg-[#D4A5A5] flex items-center justify-center text-white shadow-sm">
                 <i data-lucide="folder-kanban" class="w-5 h-5"></i>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-xl p-4 border border-[#F0E6E6] shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-medium text-slate-500 mb-0.5">Total Projects</p>
-                <h3 class="text-2xl font-bold text-slate-800">{{activeProjectsCount}}</h3>
-            </div>
-            <div class="w-10 h-10 rounded-lg bg-[#9F87AF] flex items-center justify-center text-white shadow-sm">
-                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
             </div>
         </div>
 
@@ -41,70 +31,72 @@
                 <i data-lucide="trending-up" class="w-5 h-5"></i>
             </div>
         </div>
+
+        <div class="bg-white rounded-xl p-4 border border-[#F0E6E6] shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-0.5">System Status</p>
+                <h3 class="text-sm font-bold text-green-600 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500"></span> Online
+                </h3>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shadow-sm">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+            </div>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
         
-        <div class="bg-white rounded-xl p-4 border border-[#F0E6E6] shadow-sm flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between mb-3 shrink-0">
-                <h2 class="text-lg font-bold text-slate-800">Recent Projects</h2>
-                <a href="/contractor/projects" class="text-xs text-[#D4A5A5] hover:text-[#C9A0A0] font-medium transition-colors">View All</a>
+        <div class="lg:col-span-2 bg-white rounded-xl p-5 border border-[#F0E6E6] shadow-sm flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-5 h-5 text-[#D4A5A5]"></i>
+                    Spending Analysis
+                </h2>
+                <span class="text-xs text-slate-400">By Top 5 Projects</span>
             </div>
+            
+            <div class="flex-1 relative w-full h-64">
+                {{#hasChartData}}
+                <canvas id="spendingChart"></canvas>
+                {{/hasChartData}}
 
-            <div class="space-y-3 overflow-y-auto pr-1">
-                <div class="p-3 rounded-lg border border-slate-100 hover:border-[#D4A5A5]/30 hover:shadow-sm transition-all bg-white group cursor-pointer">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-bold text-sm text-slate-800 mb-0.5 group-hover:text-[#D4A5A5] transition-colors">Taichung Da-An Sports Center</h4>
-                            <p class="text-xs text-slate-500">Da'an Dist, Taichung City</p>
-                        </div>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-600">
-                            Planning
-                        </span>
-                    </div>
+                {{^hasChartData}}
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                    <i data-lucide="bar-chart-2" class="w-10 h-10 mb-2 opacity-50"></i>
+                    <p class="text-sm">Not enough data to display chart</p>
                 </div>
-
-                {{^activeProjectsCount}}
-                <div class="flex-1 flex flex-col items-center justify-center text-slate-400 py-4">
-                    <i data-lucide="folder-open" class="w-8 h-8 mb-2 text-slate-200"></i>
-                    <p class="text-xs">No active projects</p>
-                </div>
-                {{/activeProjectsCount}}
+                {{/hasChartData}}
             </div>
         </div>
 
-        <div class="bg-white rounded-xl p-4 border border-[#F0E6E6] shadow-sm flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between mb-3 shrink-0">
+        <div class="bg-white rounded-xl p-5 border border-[#F0E6E6] shadow-sm flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between mb-4 shrink-0">
                 <h2 class="text-lg font-bold text-slate-800">Recent Orders</h2>
-                <a href="/contractor/orders" class="text-xs text-[#D4A5A5] hover:text-[#C9A0A0] font-medium transition-colors">View All</a>
+                <a href="/contractor/orders" class="text-xs text-blue-600 hover:underline font-medium transition-colors">View All</a>
             </div>
 
-            <div class="flex-1 flex flex-col overflow-y-auto pr-1">
+            <div class="flex-1 flex flex-col overflow-y-auto pr-1 space-y-3">
                 {{#recentOrders}}
-                <div class="space-y-2 w-full mb-2">
-                    <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-[#FFF5F5] hover:border-[#F5E6E8] transition-colors">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-md bg-white flex items-center justify-center text-[#D4A5A5] shadow-sm border border-slate-100">
-                                <i data-lucide="package" class="w-4 h-4"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-slate-800 text-xs">{{ProjectName}}</h4>
-                                <p class="text-[10px] text-slate-500">{{SupplierName}}</p>
-                            </div>
+                <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-[#FFF5F5] hover:border-[#F5E6E8] transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-md bg-white flex items-center justify-center text-[#D4A5A5] shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                            <i data-lucide="package" class="w-4 h-4"></i>
                         </div>
-                        <div class="text-right">
-                            <div class="font-bold text-slate-800 text-sm">NT$ {{TotalAmount}}</div>
-                            <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600">{{Status}}</span>
+                        <div class="min-w-0">
+                            <h4 class="font-bold text-slate-800 text-xs truncate max-w-[120px]">{{ProjectName}}</h4>
+                            <p class="text-[10px] text-slate-500 truncate">{{SupplierName}}</p>
                         </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="font-bold text-slate-800 text-xs">NT$ {{TotalAmount}}</div>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-500">{{Status}}</span>
                     </div>
                 </div>
                 {{/recentOrders}}
 
                 {{^recentOrders}}
                 <div class="flex flex-col items-center justify-center text-slate-400 h-full py-4">
-                    <div class="w-12 h-12 mb-2 rounded-xl bg-[#FAF5F5] flex items-center justify-center transform rotate-12">
-                        <i data-lucide="package-open" class="w-6 h-6 text-[#D4A5A5]"></i>
-                    </div>
                     <p class="text-xs font-medium text-slate-500">No recent orders</p>
                 </div>
                 {{/recentOrders}}
@@ -113,7 +105,6 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
-        
         <a href="/contractor/projects" class="group bg-white rounded-xl p-4 border border-[#F0E6E6] shadow-sm hover:shadow-md hover:border-[#D4A5A5]/50 transition-all flex items-center gap-4">
             <div class="w-12 h-12 rounded-xl bg-[#FFF5F5] text-[#D4A5A5] flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shrink-0">
                 <i data-lucide="folder-kanban" class="w-6 h-6"></i>
@@ -143,6 +134,65 @@
                 <p class="text-xs text-slate-500">Manage connections</p>
             </div>
         </a>
-
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {{#hasChartData}}
+    const ctx = document.getElementById('spendingChart');
+    
+    // 從後端接收數據 (注意這裡不需要加引號，因為後端已經 JSON.stringify 過了)
+    const labels = {{{chartLabels}}}; 
+    const data = {{{chartData}}};
+
+    new Chart(ctx, {
+        type: 'bar', // 你可以改成 'pie' 或 'line'
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Spent (NT$)',
+                data: data,
+                backgroundColor: [
+                    'rgba(212, 165, 165, 0.7)', // #D4A5A5
+                    'rgba(159, 135, 175, 0.7)', // #9F87AF
+                    'rgba(198, 183, 155, 0.7)', // #C6B79B
+                    'rgba(138, 191, 170, 0.7)', // #8ABFAA
+                    'rgba(203, 213, 225, 0.7)'  // Slate
+                ],
+                borderColor: [
+                    'rgba(212, 165, 165, 1)',
+                    'rgba(159, 135, 175, 1)',
+                    'rgba(198, 183, 155, 1)',
+                    'rgba(138, 191, 170, 1)',
+                    'rgba(203, 213, 225, 1)'
+                ],
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false // 長條圖通常不需要圖例
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    {{/hasChartData}}
+</script>

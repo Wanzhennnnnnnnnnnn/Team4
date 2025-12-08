@@ -106,18 +106,16 @@ UNLOCK TABLES;
 DROP TABLE IF EXISTS `Notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `Notifications` (
-  `NotificationID` int NOT NULL AUTO_INCREMENT,
-  `ContractorID` int NOT NULL,
-  `Title` varchar(255) DEFAULT NULL,
-  `Message` text,
-  `Link` varchar(255) DEFAULT NULL,
-  `IsRead` tinyint(1) DEFAULT '0',
-  `CreatedAt` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`NotificationID`),
-  KEY `ContractorID` (`ContractorID`),
-  CONSTRAINT `Notifications_ibfk_1` FOREIGN KEY (`ContractorID`) REFERENCES `Contractors` (`ContractorID`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE Notifications (
+    'NotificationID' INT AUTO_INCREMENT PRIMARY KEY,
+    'ContractorID' INT NOT NULL,
+    'Title' VARCHAR(100),
+    'Message' TEXT,
+    'Link' VARCHAR(255),
+    'IsRead' TINYINT(1) DEFAULT 0,
+    'CreatedAt' DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ContractorID) REFERENCES Contractors(ContractorID) ON DELETE CASCADE
+);ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -506,6 +504,15 @@ LOCK TABLES `units` WRITE;
 INSERT INTO `units` VALUES (20,'900㎠'),(17,'B.㎥'),(2,'Bag'),(19,'C.㎥'),(1,'Day'),(3,'Hour'),(5,'kg'),(16,'km'),(8,'L'),(10,'L.㎥'),(12,'m'),(4,'m²'),(9,'㎥'),(11,'Metric Ton'),(18,'One test'),(6,'Pair'),(7,'Piece'),(14,'root'),(15,'Set'),(13,'Trip');
 /*!40000 ALTER TABLE `units` ENABLE KEYS */;
 UNLOCK TABLES;
+
+
+DROP TABLE IF EXISTS `PriceHistory`;
+CREATE TABLE PriceHistory (
+    'id' INT AUTO_INCREMENT PRIMARY KEY,
+    'material_id' CHAR(8) NOT NULL,
+    'price' DECIMAL(10, 2) NOT NULL,
+    'recorded_at' DATE NOT NULL
+);
 
 --
 -- Dumping routines for database 'assignment_db'
