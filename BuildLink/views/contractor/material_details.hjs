@@ -1,5 +1,3 @@
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <div class="max-w-7xl mx-auto space-y-6">
     
     <a href="/contractor/materials?projectId={{projectId}}&workItemId={{workItemId}}" class="inline-flex items-center text-sm text-slate-500 hover:text-blue-600 transition-colors">
@@ -29,33 +27,6 @@
                 High-quality {{material.MaterialName}} suitable for various construction needs. 
                 This material meets standard industry specifications.
             </p>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-        <div class="flex justify-between items-center mb-4">
-            <div>
-                <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <i data-lucide="trending-up" class="w-5 h-5 text-blue-600"></i>
-                    Price Trend Analysis
-                </h3>
-                <p class="text-xs text-slate-500 mt-0.5">Historical price fluctuation (Last 6 Months)</p>
-            </div>
-            <span id="trendBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 animate-pulse">
-                Loading Data...
-            </span>
-        </div>
-
-        <div class="relative h-64 w-full">
-            <canvas id="priceChart"></canvas>
-        </div>
-
-        <div id="aiInsight" class="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-600 flex gap-3 items-start">
-            <i data-lucide="sparkles" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5"></i>
-            <div>
-                <span class="font-semibold text-slate-800">AI Market Insight:</span>
-                <span id="aiText">Analyzing current market data to provide procurement advice...</span>
-            </div>
         </div>
     </div>
 
@@ -146,107 +117,3 @@
         {{/suppliers}}
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', async function() {
-    const materialId = "{{material.MaterialID}}";
-    const ctx = document.getElementById('priceChart').getContext('2d');
-    const badge = document.getElementById('trendBadge');
-    const aiText = document.getElementById('aiText');
-
-    try {
-        // ★★★ 修正點：加上 /contractor 前綴 ★★★
-        const response = await fetch(`/contractor/api/materials/${materialId}/history`);
-        const historyData = await response.json();
-
-        // 2. 如果沒有數據
-        if (!historyData || historyData.length === 0) {
-            badge.innerText = 'No Data';
-            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500';
-            aiText.innerText = "Insufficient data to provide market analysis.";
-            return;
-        }
-
-        const labels = historyData.map(d => d.date);
-        const prices = historyData.map(d => parseFloat(d.price));
-
-        // 3. 繪製圖表
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Price (TWD)',
-                    data: prices,
-                    borderColor: '#2563eb', // Tailwind Blue-600
-                    backgroundColor: 'rgba(37, 99, 235, 0.05)',
-                    borderWidth: 2,
-                    tension: 0.4, // 平滑曲線
-                    fill: true,
-                    pointBackgroundColor: '#ffffff',
-                    pointBorderColor: '#2563eb',
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        padding: 12,
-                        titleFont: { size: 13 },
-                        bodyFont: { size: 13 },
-                        displayColors: false,
-                        callbacks: {
-                            label: (context) => 'Price: $' + context.parsed.y.toLocaleString()
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        grid: { borderDash: [4, 4], color: '#f1f5f9' },
-                        ticks: { font: { size: 11 }, color: '#64748b' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { font: { size: 11 }, color: '#64748b' }
-                    }
-                }
-            }
-        });
-
-        // 4. AI 簡單分析邏輯
-        const currentPrice = prices[prices.length - 1];
-        const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-        const diffPercent = ((currentPrice - avgPrice) / avgPrice) * 100;
-
-        badge.classList.remove('animate-pulse');
-
-        if (diffPercent < -3) {
-            // 買入建議
-            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700';
-            badge.innerText = 'Good Value';
-            aiText.innerHTML = `Great time to buy! Current price ($${currentPrice.toLocaleString()}) is <strong class="text-emerald-600">${Math.abs(diffPercent).toFixed(1)}% lower</strong> than average.`;
-        } else if (diffPercent > 3) {
-            // 觀望建議
-            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700';
-            badge.innerText = 'Price High';
-            aiText.innerHTML = `Price is currently high ($${currentPrice.toLocaleString()}), roughly <strong class="text-amber-600">${diffPercent.toFixed(1)}% above</strong> average. Consider waiting if possible.`;
-        } else {
-            // 持平
-            badge.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600';
-            badge.innerText = 'Stable';
-            aiText.innerHTML = `Market is stable. Current price ($${currentPrice.toLocaleString()}) is consistent with the 6-month trend.`;
-        }
-
-    } catch (err) {
-        console.error("Chart Error:", err);
-        aiText.innerText = "Unable to load price trend data.";
-        badge.innerText = 'Error';
-    }
-});
-</script>

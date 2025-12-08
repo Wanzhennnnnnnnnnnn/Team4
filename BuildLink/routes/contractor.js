@@ -572,7 +572,7 @@ router.get('/materials', async (req, res) => {
 });
 
 // ==========================================
-// 8. Material Detail
+// 8. Material Detail (注意：折線圖後端API已移除，前端canvas代碼也建議刪除)
 // ==========================================
 router.get('/materials/:id', async (req, res) => {
     try {
@@ -612,7 +612,7 @@ router.get('/materials/:id', async (req, res) => {
 });
 
 // ==========================================
-// 9. Transaction History (Orders) - 修正版
+// 9. Transaction History (Orders)
 // ==========================================
 router.get('/orders', async (req, res) => {
     try {
@@ -687,7 +687,7 @@ router.get('/orders', async (req, res) => {
 });
 
 // ==========================================
-// 10. Simulate Status (含通知)
+// 10. Simulate Status
 // ==========================================
 router.post('/orders/:id/simulate-status', async (req, res) => {
     try {
@@ -741,7 +741,7 @@ router.post('/orders/:id/simulate-status', async (req, res) => {
 });
 
 // ==========================================
-// 11. Notifications / Profile (略，保持不變)
+// 11. Notifications / Profile
 // ==========================================
 router.get('/notifications', async (req, res) => {
     try {
@@ -797,7 +797,7 @@ router.post('/profile/update', async (req, res) => {
 });
 
 // ==========================================
-// 12. Cart & Checkout (含預算預警) - ★★★ 關鍵修改 ★★★
+// 12. Cart & Checkout (含專案/工項雙重預算預警)
 // ==========================================
 router.post('/cart/add', (req, res) => {
     try {
@@ -826,7 +826,7 @@ router.get('/cart', async (req, res) => {
     } catch (err) { res.status(500).send('Cart Error'); }
 });
 
-// ★★★ 智慧預算預警版 Checkout ★★★
+// ★★★ 智慧預算預警版 Checkout (包含工項 + 專案雙重檢查) ★★★
 router.post('/cart/checkout', async (req, res) => {
     const conn = await pool.getConnection();
     try {
@@ -864,41 +864,71 @@ router.post('/cart/checkout', async (req, res) => {
             } catch (notifErr) {}
 
             // =========================================================
-            // ★★★ 獨特功能：智慧預算預警邏輯 (Budget Alert) ★★★
+            // A. 工項 (Work Item) 預算預警
             // =========================================================
             if (entry.workItemId) {
                 try {
-                    // A. 抓取該工項的預算
                     const [wiRows] = await conn.execute('SELECT Name, EstimatedCost FROM WorkItems WHERE WorkItemID = ?', [entry.workItemId]);
                     
                     if (wiRows.length > 0) {
                         const workItemName = wiRows[0].Name;
                         const budget = parseFloat(wiRows[0].EstimatedCost) || 0;
 
-                        // B. 抓取目前為止的總花費
                         const [sumRows] = await conn.execute('SELECT SUM(TotalAmount) as TotalSpent FROM PurchaseOrder WHERE WorkItemID = ? AND Status != "Cancelled"', [entry.workItemId]);
                         const totalSpent = parseFloat(sumRows[0].TotalSpent) || 0;
 
-                        // C. 判斷是否超支
                         if (budget > 0) {
                             if (totalSpent > budget) {
-                                // 嚴重超支
                                 await conn.execute(
                                     'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
-                                    [contractorId, '⚠️ Budget Exceeded!', `Critical: Spending on "${workItemName}" ($${totalSpent.toLocaleString()}) has exceeded the budget ($${budget.toLocaleString()})!`, `/contractor/projects/${entry.projectId}`]
+                                    [contractorId, '⚠️ Work Item Over Budget!', `Spending on task "${workItemName}" ($${totalSpent.toLocaleString()}) has exceeded the budget ($${budget.toLocaleString()})!`, `/contractor/projects/${entry.projectId}`]
                                 );
                             } else if (totalSpent > (budget * 0.8)) {
-                                // 預算緊張 (80%)
                                 await conn.execute(
                                     'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
-                                    [contractorId, '📢 Budget Alert', `Warning: You have used over 80% of the budget for "${workItemName}". Spent: $${totalSpent.toLocaleString()} / Budget: $${budget.toLocaleString()}`, `/contractor/projects/${entry.projectId}`]
+                                    [contractorId, '📢 Work Item Budget Alert', `Warning: 80% of budget used for task "${workItemName}".`, `/contractor/projects/${entry.projectId}`]
                                 );
                             }
                         }
                     }
-                } catch (budgetErr) { console.error("Budget Check Error:", budgetErr); }
+                } catch (budgetErr) { console.error("Work Item Budget Check Error:", budgetErr); }
             }
+
             // =========================================================
+            // B. ★★★ 新增：專案 (Project) 整體預算預警 ★★★
+            // =========================================================
+            if (entry.projectId) {
+                try {
+                    // 1. 抓取該「專案」的總預算
+                    const [projRows] = await conn.execute('SELECT ProjectName, Budget FROM Projects WHERE ProjectID = ?', [entry.projectId]);
+                    
+                    if (projRows.length > 0) {
+                        const projectName = projRows[0].ProjectName;
+                        const projBudget = parseFloat(projRows[0].Budget) || 0;
+
+                        // 2. 抓取該專案目前為止的總花費 (PurchaseOrder)
+                        const [projSumRows] = await conn.execute('SELECT SUM(TotalAmount) as TotalSpent FROM PurchaseOrder WHERE ProjectID = ? AND Status != "Cancelled"', [entry.projectId]);
+                        const projTotalSpent = parseFloat(projSumRows[0].TotalSpent) || 0;
+
+                        // 3. 判斷是否超支
+                        if (projBudget > 0) {
+                            if (projTotalSpent > projBudget) {
+                                // 嚴重超支
+                                await conn.execute(
+                                    'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                                    [contractorId, '🚨 PROJECT OVER BUDGET!', `Critical: Total spending on project "${projectName}" ($${projTotalSpent.toLocaleString()}) has exceeded the total budget ($${projBudget.toLocaleString()})!`, `/contractor/projects/${entry.projectId}`]
+                                );
+                            } else if (projTotalSpent > (projBudget * 0.9)) {
+                                // 90% 預算提醒
+                                await conn.execute(
+                                    'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                                    [contractorId, '📢 Project Budget Warning', `Warning: You have used over 90% of the total budget for project "${projectName}".`, `/contractor/projects/${entry.projectId}`]
+                                );
+                            }
+                        }
+                    }
+                } catch (projErr) { console.error("Project Budget Check Error:", projErr); }
+            }
         }
 
         await conn.commit();
@@ -919,86 +949,6 @@ router.get('/cart/clear', (req, res) => {
     res.redirect('/contractor/cart');
 });
 
-// ==========================================
-// 13. API: Material Price History (For Chart)
-// ==========================================
-router.get('/api/materials/:id/history', async (req, res) => {
-    try {
-        const materialId = req.params.id;
-        
-        // 從 PriceHistory 表格抓取數據
-        // 注意：這裡使用 DATE_FORMAT 將日期轉為 YYYY-MM-DD 格式方便前端使用
-        const [historyRows] = await pool.execute(`
-            SELECT price, DATE_FORMAT(recorded_at, '%Y-%m-%d') as date 
-            FROM PriceHistory 
-            WHERE material_id = ? 
-            ORDER BY recorded_at ASC
-        `, [materialId]);
-
-        res.json(historyRows);
-    } catch (err) {
-        console.error("Error fetching price history:", err);
-        res.status(500).json({ error: 'Database error' });
-    }
-});
-
-// ==========================================
-// 14. 🛠️ 工具：一鍵生成所有材料的歷史價格數據 (Mock Data Seeder)
-// 使用方法：重啟伺服器後，在瀏覽器訪問 /contractor/setup-mock-data
-// ==========================================
-router.get('/setup-mock-data', async (req, res) => {
-    const conn = await pool.getConnection();
-    try {
-        await conn.beginTransaction();
-
-        // 1. 先清空舊的歷史資料 (避免重複)
-        await conn.execute('DELETE FROM PriceHistory');
-
-        // 2. 抓出系統內「所有的」材料 ID
-        const [materials] = await conn.execute('SELECT MaterialID FROM Materials');
-
-        let insertCount = 0;
-
-        // 3. 幫每一個材料產生 6 筆數據
-        for (const mat of materials) {
-            // 設定一個基準價格 (隨機 500 ~ 2500)
-            let basePrice = Math.floor(Math.random() * 2000) + 500;
-            
-            // 產生過去 6 個月的數據
-            for (let i = 5; i >= 0; i--) {
-                const date = new Date();
-                date.setMonth(date.getMonth() - i); // 回推月份
-                const dateStr = date.toISOString().split('T')[0];
-
-                // 讓價格隨機波動 (+/- 10%)
-                const fluctuation = 1 + (Math.random() * 0.2 - 0.1); 
-                const finalPrice = (basePrice * fluctuation).toFixed(2);
-
-                await conn.execute(
-                    'INSERT INTO PriceHistory (material_id, price, recorded_at) VALUES (?, ?, ?)',
-                    [mat.MaterialID, finalPrice, dateStr]
-                );
-                insertCount++;
-            }
-        }
-
-        await conn.commit();
-        res.send(`
-            <div style="font-family: sans-serif; padding: 2rem;">
-                <h1 style="color: green;">✅ 成功！ (Success)</h1>
-                <p>已為 <strong>${materials.length}</strong> 個材料生成了共 <strong>${insertCount}</strong> 筆歷史價格數據。</p>
-                <p>Generated ${insertCount} price history records for ${materials.length} materials.</p>
-                <p><a href="/contractor/materials" style="display: inline-block; padding: 10px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px;">Return to Materials Catalog</a></p>
-            </div>
-        `);
-
-    } catch (err) {
-        await conn.rollback();
-        console.error(err);
-        res.status(500).send('生成失敗：' + err.message);
-    } finally {
-        conn.release();
-    }
-});
+// (原先的材料歷史 API 和 Mock Data API 已刪除)
 
 module.exports = router;
