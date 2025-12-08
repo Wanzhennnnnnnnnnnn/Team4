@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    # ★★★ 修改這裡：左邊是電腦的 8080，右邊是容器的 80 ★★★
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=417
+      - DB_NAME=assignment_db
+      - PORT=80  # ★★★ 告訴 app.js 使用 80 port
+
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 417
+      MYSQL_DATABASE: assignment_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
