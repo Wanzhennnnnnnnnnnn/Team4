@@ -41,11 +41,11 @@ services:
         condition: service_healthy
     networks:
       - buildlink-net
-    # # ★★★ 關鍵修正：volumes 必須向右縮排，與 environment 或 ports 對齊 ★★★
-    # volumes:
-    #   - ./BuildLink:/app
-    #   - /app/node_modules
-    # command: nodemon -L app.js
+    # ★★★ 修正：解除註解並正確縮排 ★★★
+    volumes:
+      - ./BuildLink:/app
+      - /app/node_modules
+    command: nodemon -L app.js
 
 volumes:
   mysql_data_buildlink:

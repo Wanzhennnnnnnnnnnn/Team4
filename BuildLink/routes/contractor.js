@@ -1,7 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2/promise');
-const config = require('../config');
+const path = require('path'); // 新增
+const fs = require('fs');     // 新增
+
+// const config = require('../config'); // 原始程式碼 (移除)
+
+// ★★★ 修正 Config 載入邏輯 (比照 app.js) ★★★
+// 確保在 Docker Volume 掛載模式下，也能找到 config.docker.js
+let config;
+try {
+    // 檢查上層目錄是否有 config.docker.js (因為此檔案在 routes/ 資料夾內，所以要用 ../)
+    if (process.env.DB_HOST && fs.existsSync(path.join(__dirname, '../config.docker.js'))) {
+        config = require('../config.docker');
+    } else {
+        config = require('../config');
+    }
+} catch (err) {
+    // 如果找不到 ../config，嘗試直接讀取 ../config.docker
+    try {
+        config = require('../config.docker');
+    } catch (e) {
+        console.error('Critical: No configuration file found in contractor.js');
+        // 這裡不一定要 exit，讓它拋出錯誤由上層處理也可以，但為了安全先保留報錯
+    }
+}
+
 const pool = mysql.createPool(config.db);
 
 // ====================================================
@@ -354,6 +378,24 @@ router.post('/projects/:id/workitem/add', async (req, res) => {
                 [contractorId, 'Work Item Added', `New work item "${name}" added to the project.`, `/contractor/projects/${projectId}`]
             );
         } catch (e) {}
+
+        res.redirect(`/contractor/projects/${projectId}`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error');
+    }
+});
+
+// ★★★ 新增：編輯工項 ★★★
+router.post('/projects/:projectId/workitem/edit/:workItemId', async (req, res) => {
+    try {
+        const { projectId, workItemId } = req.params;
+        const { name, description, status, estimatedCost, startDate, endDate, notes } = req.body;
+
+        await pool.execute(
+            `UPDATE WorkItems SET Name=?, Description=?, Status=?, EstimatedCost=?, StartDate=?, EndDate=?, Notes=? WHERE WorkItemID=?`,
+            [name, description, status, estimatedCost, startDate, endDate, notes, workItemId]
+        );
 
         res.redirect(`/contractor/projects/${projectId}`);
     } catch (err) {

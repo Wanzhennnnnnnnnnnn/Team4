@@ -125,11 +125,11 @@
 <body>
     <div class="login-container">
         <!-- Icon -->
-        <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+        {{!-- <div style="display: flex; justify-content: center; margin-bottom: 15px;">
             <div style="width: 48px; height: 48px; background-color: #FFF5F5; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A5A5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
             </div>
-        </div>
+        </div> --}}
 
         <h1>Join BuildLink</h1>
         <p class="subtitle">Start sourcing materials and managing projects.</p>

@@ -3,9 +3,31 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-const config = require('./config');
+// const config = require('./config'); // 原始程式碼
 const mysql = require('mysql2/promise');
 const contractorRouter = require('./routes/contractor');
+
+// ★★★ 修正 Config 載入邏輯 ★★★
+// 當使用 Docker Volumes 時，容器內的 config.js 可能會被本機資料夾覆蓋而消失
+// 這裡加入判斷，如果是在 Docker 環境 (有 DB_HOST) 且 config.docker.js 存在，優先使用它
+let config;
+try {
+    if (process.env.DB_HOST && fs.existsSync(path.join(__dirname, 'config.docker.js'))) {
+        config = require('./config.docker');
+        console.log('Using config.docker.js settings');
+    } else {
+        config = require('./config');
+    }
+} catch (err) {
+    console.warn('Warning: config.js not found, attempting to fall back or use defaults.');
+    // 如果真的找不到，嘗試直接讀取 config.docker (若存在)
+    try {
+        config = require('./config.docker');
+    } catch (e) {
+        console.error('Critical: No configuration file found (config.js or config.docker.js).');
+        process.exit(1);
+    }
+}
 
 const app = express();
 app.set('view engine', 'hjs');
