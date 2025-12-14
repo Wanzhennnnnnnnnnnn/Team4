@@ -30,10 +30,10 @@ graph TD
     Login --> Notifications("Notification Center<br/>(Shing.Rong.Lee)"):::exp
 
     %% Supplier Dashboard Branch
-    Login --> SupplierDashboard("Supplier Dashboard<br/>(Zhafran)"):::exp_missing
-    SupplierDashboard --> SupplierListOrders("List of Orders<br/>(Zhafran)"):::exp_missing
-    SupplierDashboard --> SupplierDetailOrders("Detail Orders<br/>(Zhafran)"):::exp_missing
-    SupplierDashboard --> SupplierMessage("Message Feature<br/>(Zhafran)"):::exp_missing
+    Login --> SupplierDashboard("Supplier Dashboard<br/>(Zhafran)"):::exp
+    SupplierDashboard --> SupplierListOrders("List of Orders<br/>(Zhafran)"):::exp
+    SupplierDashboard --> SupplierDetailOrders("Detail Orders<br/>(Zhafran)"):::exp
+    SupplierDashboard --> SupplierMessage("Message Feature<br/>(Zhafran)"):::exp
 
     %% Dashboard Branch (Completed)
     Dashboard --> TotalSpend("Total Project Spend<br/>(Wan.Zhen.HSU)"):::exp
