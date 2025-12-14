@@ -29,12 +29,18 @@ graph TD
     %% 新增：通知中心
     Login --> Notifications("Notification Center<br/>(Shing.Rong.Lee)"):::exp
 
+    %% Supplier Dashboard Branch
+    Login --> SupplierDashboard("Supplier Dashboard<br/>(Zhafran)"):::exp_missing
+    SupplierDashboard --> SupplierListOrders("List of Orders<br/>(Zhafran)"):::exp_missing
+    SupplierDashboard --> SupplierDetailOrders("Detail Orders<br/>(Zhafran)"):::exp_missing
+    SupplierDashboard --> SupplierMessage("Message Feature<br/>(Zhafran)"):::exp_missing
+
     %% Dashboard Branch (Completed)
     Dashboard --> TotalSpend("Total Project Spend<br/>(Wan.Zhen.HSU)"):::exp
     Dashboard --> ActiveOrders("Active orders<br/>(Wan.Zhen.HSU)"):::exp
     Dashboard --> ActiveProjects("Active projects<br/>(Wan.Zhen.HSU)"):::exp
     Dashboard --> RecentOrder("Recent Orders<br/>(Wan.Zhen.HSU)"):::exp
-    Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp_missing
+    Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp
 
     %% History Procurement Branch
     TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp_missing
@@ -59,7 +65,7 @@ graph TD
 
     %% Path A: Suppliers
     Suppliers --> SupSearch("Search Suppliers<br/>(List View)<br/>(Wan.Zhen.HSU)"):::mvp
-    SupSearch --> Message("Message Supplier<br/>(Zhafran)"):::exp_missing
+    SupSearch --> Message("Message Supplier<br/>(Zhafran)"):::exp
 
     SupSearch -- "Click Supplier" --> SupDetail("Supplier Detail Page<br/>(Info + Material List)<br/>(Wan.Zhen.HSU)"):::mvp
     SupDetail --> Material("Select Material & Qty<br/>(Wan.Zhen.HSU)"):::mvp
@@ -73,7 +79,7 @@ graph TD
     MatDetail -. "View Supplier Info" .-> SupDetail
 
     %% 收藏功能 (缺失)
-    SupDetail -- "Save Supplier" --> Wishlist("Wishlist/Favorites<br/>(Zhafran)"):::exp_missing
+    SupDetail -- "Save Supplier" --> Wishlist("Wishlist/Favorites<br/>(Zhafran)"):::exp
     MatDetail -- "Save Material" --> Wishlist
 
     %% Order Configuration
