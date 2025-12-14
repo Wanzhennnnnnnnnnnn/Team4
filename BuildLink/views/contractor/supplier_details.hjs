@@ -30,9 +30,25 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-1 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 text-emerald-600 font-bold">
-                <i data-lucide="star" class="w-4 h-4 fill-current"></i>
-                <span>{{supplier.Rating}}</span>
+
+            <div class="flex items-center gap-2">
+                <!-- Save Supplier Button -->
+                <button onclick="toggleSaveSupplier('{{supplier.SupplierID}}')"
+                        id="saveSupplierBtn"
+                        class="p-2 rounded-lg border transition-colors {{#supplier.isSaved}}bg-red-50 border-red-200{{/supplier.isSaved}}{{^supplier.isSaved}}bg-white border-slate-200 hover:border-red-200{{/supplier.isSaved}}"
+                        title="{{#supplier.isSaved}}Remove from wishlist{{/supplier.isSaved}}{{^supplier.isSaved}}Save to wishlist{{/supplier.isSaved}}">
+                    <i data-lucide="heart" class="w-5 h-5 {{#supplier.isSaved}}text-red-500 fill-current{{/supplier.isSaved}}{{^supplier.isSaved}}text-slate-400{{/supplier.isSaved}}"></i>
+                </button>
+
+                <!-- Rating Badge -->
+                <div class="flex items-center space-x-1 bg-amber-50 px-3 py-1 rounded-full border border-amber-100 self-start">
+                    <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-current"></i>
+                    <span class="text-amber-700 font-bold text-sm">{{supplier.Rating}}</span>
+                </div>
+                <a href="/contractor/supplier/{{supplier.SupplierID}}/message" class="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors text-sm font-semibold">
+                    <i data-lucide="messages-square" class="w-4 h-4"></i>
+                    <span>Message</span>
+                </a>
             </div>
         </div>
     </div>
@@ -42,14 +58,14 @@
         <input type="hidden" name="supplier_id" value="{{supplier.SupplierID}}">
         <input type="hidden" name="cart_data" id="cartDataInput">
         <!-- ★★★ 修改：移除固定的 hidden input，改由下方的 select 控制 ★★★ -->
-        
+
         <!-- 2. 訂單設定 (Order Configuration) -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
             <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
                 <i data-lucide="settings-2" class="w-5 h-5 text-[#D4A5A5]"></i> Order Configuration
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
+
                 <!-- 專案選擇 -->
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">Select Project <span class="text-red-500">*</span></label>
@@ -86,7 +102,7 @@
             </div>
         </div>
 
-        <!-- 3. 材料列表 (Table Style) -->
+        <!-- 3. 材料列表 (Card Style) -->
         <div class="space-y-4">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                 <div class="flex items-center gap-3">
@@ -101,69 +117,54 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
-                                <th class="px-6 py-4">Product Name</th>
-                                <th class="px-6 py-4 w-[1%] whitespace-nowrap">Category</th>
-                                <th class="px-6 py-4 w-[1%] whitespace-nowrap text-right">Price</th>
-                                <th class="px-6 py-4 w-[1%] whitespace-nowrap text-right">Stock</th>
-                                <th class="px-6 py-4 w-[1%] whitespace-nowrap text-center">Quantity</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            {{#supplier.items}}
-                            <tr class="hover:bg-slate-50 transition-colors group">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-lg bg-[#FFF5F5] flex items-center justify-center text-[#D4A5A5] shrink-0">
-                                            <i data-lucide="box" class="w-5 h-5"></i>
-                                        </div>
-                                        <div>
-                                            <span class="font-medium text-slate-900 block">{{name}}</span>
-                                            <span class="text-xs text-slate-400 font-mono">#{{id}}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                        {{category}}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-right whitespace-nowrap">
-                                    <span class="font-bold text-slate-800">${{price}}</span>
-                                    <span class="text-xs text-slate-400 block">/ {{unit}}</span>
-                                </td>
-                                <td class="px-6 py-4 text-right whitespace-nowrap text-sm text-slate-600">
-                                    {{stock}}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <!-- 數量加減控制器 -->
-                                    <div class="flex items-center justify-center gap-1">
-                                        <button type="button" onclick="updateQty('{{id}}', -1, {{price}})" class="w-8 h-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#D4A5A5] transition-colors"><i data-lucide="minus" class="w-4 h-4"></i></button>
-                                        <input type="number" id="qty-{{id}}" value="0" min="0" max="{{stock}}" readonly class="w-12 text-center bg-transparent border-none font-bold text-slate-800 focus:ring-0 p-0" data-id="{{id}}" data-price="{{price}}" data-name="{{name}}">
-                                        <button type="button" onclick="updateQty('{{id}}', 1, {{price}})" class="w-8 h-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-[#D4A5A5] transition-colors"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {{/supplier.items}}
-                            
-                            {{^supplier.items}}
-                            <tr>
-                                <td colspan="5" class="px-6 py-16 text-center text-slate-500">
-                                    <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
-                                        <i data-lucide="search-x" class="w-6 h-6"></i>
-                                    </div>
-                                    <p>No materials found matching your search.</p>
-                                </td>
-                            </tr>
-                            {{/supplier.items}}
-                        </tbody>
-                    </table>
+            {{#supplier.items}}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row items-center gap-4 transition-all hover:shadow-md material-row" data-material-id="{{id}}">
+                <div class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0">
+                    <i data-lucide="box" class="w-6 h-6"></i>
+                </div>
+                <div class="flex-1 text-center sm:text-left">
+                    <h4 class="font-bold text-slate-800">{{name}}</h4>
+                    <div class="flex flex-wrap gap-2 justify-center sm:justify-start mt-1">
+                        <span class="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">{{category}}</span>
+                        <span class="text-xs text-slate-400">Stock: {{stock}}</span>
+                    </div>
+                </div>
+                <div class="text-right px-4">
+                    <div class="font-bold text-slate-800 text-lg">${{price}}</div>
+                    <div class="text-xs text-slate-500">per {{unit}}</div>
+                </div>
+
+                <!-- Save Material Button -->
+                <button onclick="toggleSaveMaterial('{{id}}', '{{../supplier.SupplierID}}')"
+                        id="saveMaterialBtn-{{id}}"
+                        class="p-2 rounded-lg border transition-colors {{#isSaved}}bg-red-50 border-red-200{{/isSaved}}{{^isSaved}}bg-white border-slate-200 hover:border-red-200{{/isSaved}}"
+                        type="button"
+                        title="{{#isSaved}}Remove from wishlist{{/isSaved}}{{^isSaved}}Save to wishlist{{/isSaved}}">
+                    <i data-lucide="heart" class="w-4 h-4 {{#isSaved}}text-red-500 fill-current{{/isSaved}}{{^isSaved}}text-slate-400{{/isSaved}}"></i>
+                </button>
+
+                <div class="flex items-center gap-3 bg-slate-50 rounded-lg p-1 border border-slate-200">
+                    <button type="button" onclick="updateQty('{{id}}', -1, {{price}})" class="w-8 h-8 flex items-center justify-center rounded-md bg-white shadow-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                        <i data-lucide="minus" class="w-4 h-4"></i>
+                    </button>
+                    <input type="number" id="qty-{{id}}" value="0" min="0" max="{{stock}}" readonly
+                           class="w-12 text-center bg-transparent border-none font-bold text-slate-800 focus:ring-0 p-0"
+                           data-id="{{id}}" data-price="{{price}}" data-name="{{name}}">
+                    <button type="button" onclick="updateQty('{{id}}', 1, {{price}})" class="w-8 h-8 flex items-center justify-center rounded-md bg-white shadow-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
                 </div>
             </div>
+            {{/supplier.items}}
+
+            {{^supplier.items}}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+                <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
+                    <i data-lucide="search-x" class="w-6 h-6"></i>
+                </div>
+                <p class="text-slate-500">No materials found matching your search.</p>
+            </div>
+            {{/supplier.items}}
         </div>
 
         <!-- 4. 底部固定結帳欄 -->
@@ -190,13 +191,13 @@
 <!-- ★★★ 新增：從後端傳來的工項資料 (JSON) ★★★ -->
 <script>
     // 從後端接收所有工項資料
-    const allWorkItems = {{{allWorkItemsJSON}}}; 
+    const allWorkItems = {{{allWorkItemsJSON}}};
     const preSelectedWorkItemId = "{{preSelectedWorkItemId}}";
 
     function filterWorkItems() {
         const projectId = document.getElementById('projectSelect').value;
         const workItemSelect = document.getElementById('workItemSelect');
-        
+
         // 清空並重置選項
         workItemSelect.innerHTML = '<option value="">-- No Work Item --</option>';
         workItemSelect.disabled = true;
@@ -229,9 +230,9 @@
         if (newVal < 0) newVal = 0;
         if (newVal > maxVal) newVal = maxVal;
         input.value = newVal;
-        
+
         // 更新選中行的背景色
-        const row = input.closest('tr'); 
+        const row = input.closest('.material-row');
         if (newVal > 0) {
             cart[id] = newVal;
             row.classList.add('bg-blue-50/50');
@@ -274,11 +275,100 @@
         document.getElementById('orderForm').submit();
     }
 
+    // Toggle save supplier
+    async function toggleSaveSupplier(supplierId) {
+        try {
+            const response = await fetch(`/contractor/wishlist/supplier/${supplierId}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+
+            // Update UI
+            const btn = document.getElementById('saveSupplierBtn');
+            const icon = btn.querySelector('[data-lucide="heart"]');
+
+            if (data.saved) {
+                btn.classList.add('bg-red-50', 'border-red-200');
+                btn.classList.remove('bg-white', 'border-slate-200');
+                icon.classList.add('text-red-500', 'fill-current');
+                icon.classList.remove('text-slate-400');
+                btn.title = 'Remove from wishlist';
+            } else {
+                btn.classList.remove('bg-red-50', 'border-red-200');
+                btn.classList.add('bg-white', 'border-slate-200');
+                icon.classList.remove('text-red-500', 'fill-current');
+                icon.classList.add('text-slate-400');
+                btn.title = 'Save to wishlist';
+            }
+
+            lucide.createIcons();
+            showToast(data.message, data.saved ? 'success' : 'info');
+        } catch (err) {
+            console.error('Error toggling supplier:', err);
+            showToast('Failed to update wishlist', 'error');
+        }
+    }
+
+    // Toggle save material
+    async function toggleSaveMaterial(materialId, supplierId) {
+        try {
+            const response = await fetch(`/contractor/wishlist/material/${materialId}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ supplierContext: supplierId })
+            });
+            const data = await response.json();
+
+            const btn = document.getElementById(`saveMaterialBtn-${materialId}`);
+            const icon = btn.querySelector('[data-lucide="heart"]');
+
+            if (data.saved) {
+                btn.classList.add('bg-red-50', 'border-red-200');
+                btn.classList.remove('bg-white', 'border-slate-200');
+                icon.classList.add('text-red-500', 'fill-current');
+                icon.classList.remove('text-slate-400');
+                btn.title = 'Remove from wishlist';
+            } else {
+                btn.classList.remove('bg-red-50', 'border-red-200');
+                btn.classList.add('bg-white', 'border-slate-200');
+                icon.classList.remove('text-red-500', 'fill-current');
+                icon.classList.add('text-slate-400');
+                btn.title = 'Save to wishlist';
+            }
+
+            lucide.createIcons();
+            showToast(data.message, data.saved ? 'success' : 'info');
+        } catch (err) {
+            console.error('Error toggling material:', err);
+            showToast('Failed to update wishlist', 'error');
+        }
+    }
+
+    // Toast notification utility
+    function showToast(message, type = 'info') {
+        const colors = {
+            success: 'bg-green-50 text-green-800 border-green-200',
+            error: 'bg-red-50 text-red-800 border-red-200',
+            info: 'bg-blue-50 text-blue-800 border-blue-200'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `fixed top-4 right-4 px-4 py-3 rounded-lg border shadow-lg z-50 ${colors[type]} transition-opacity duration-300`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
+    }
+
     // 初始化：如果已經有選定的專案，就執行一次篩選
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const autoAddId = urlParams.get('autoAdd');
-        
+
         // 觸發一次工項篩選，確保如果有預選專案，工項選單會跳出來
         filterWorkItems();
 
@@ -289,7 +379,10 @@
                 // 自動將數量設為 1
                 updateQty(autoAddId, 1, price);
                 // 滾動到該行
-                input.closest('tr').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const row = input.closest('.material-row');
+                if (row) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
             }
         }
     });

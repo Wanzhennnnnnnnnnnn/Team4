@@ -1,0 +1,234 @@
+<div class="max-w-6xl mx-auto">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-800 mb-2">Wishlist</h1>
+        <p class="text-slate-600">Your saved suppliers and materials</p>
+    </div>
+
+    <!-- Saved Suppliers Section -->
+    <div class="mb-8">
+        <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <i data-lucide="users" class="w-6 h-6 text-blue-600"></i>
+            Saved Suppliers ({{savedSuppliers.length}})
+        </h2>
+
+        {{#savedSuppliers}}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-3">
+                        <h3 class="text-lg font-bold text-slate-800">{{SupplierName}}</h3>
+                        <div class="flex items-center space-x-1 bg-amber-50 px-2 py-1 rounded-full border border-amber-100">
+                            <i data-lucide="star" class="w-3 h-3 text-amber-400 fill-current"></i>
+                            <span class="text-amber-700 font-semibold text-xs">{{Rating}}</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-slate-400"></i>
+                            <span>{{Address}}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="phone" class="w-4 h-4 text-slate-400"></i>
+                            <span>{{PhoneNumber}}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="mail" class="w-4 h-4 text-slate-400"></i>
+                            <span>{{Email}}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-slate-400">
+                            <i data-lucide="clock" class="w-4 h-4"></i>
+                            <span>Saved {{SavedAt}}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <a href="/contractor/supplier/{{SupplierID}}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                            View Details
+                        </a>
+                    </div>
+                </div>
+
+                <button onclick="confirmRemoveSupplier('{{SupplierID}}', '{{SupplierName}}')"
+                        class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                        title="Remove from wishlist">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+        {{/savedSuppliers}}
+
+        {{^savedSuppliers.length}}
+        <div class="bg-slate-50 rounded-xl border border-slate-200 p-8 text-center">
+            <i data-lucide="users-2" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+            <p class="text-slate-500">No saved suppliers yet</p>
+        </div>
+        {{/savedSuppliers.length}}
+    </div>
+
+    <!-- Saved Materials Section -->
+    <div class="mb-8">
+        <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <i data-lucide="package" class="w-6 h-6 text-blue-600"></i>
+            Saved Materials ({{savedMaterials.length}})
+        </h2>
+
+        {{#savedMaterials}}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-3">
+                        <h3 class="text-lg font-bold text-slate-800">{{MaterialName}}</h3>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">{{CategoryName}}</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600 mb-4">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="ruler" class="w-4 h-4 text-slate-400"></i>
+                            <span>Unit: {{UnitName}}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="dollar-sign" class="w-4 h-4 text-slate-400"></i>
+                            <span>Price: ${{PricePerUnit}}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="package-2" class="w-4 h-4 text-slate-400"></i>
+                            <span>Stock: {{AvailableStock}}</span>
+                        </div>
+                    </div>
+
+                    {{#SupplierName}}
+                    <div class="text-sm text-slate-500 mb-3">
+                        <i data-lucide="store" class="w-4 h-4 inline text-slate-400"></i>
+                        Saved from: <span class="font-medium text-slate-700">{{SupplierName}}</span>
+                    </div>
+                    {{/SupplierName}}
+
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                        <i data-lucide="clock" class="w-3 h-3"></i>
+                        <span>Saved {{SavedAt}}</span>
+                    </div>
+
+                    {{#SupplierID}}
+                    <div class="mt-4">
+                        <a href="/contractor/supplier/{{SupplierID}}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                            View Supplier
+                        </a>
+                    </div>
+                    {{/SupplierID}}
+                </div>
+
+                <button onclick="confirmRemoveMaterial('{{MaterialID}}', '{{MaterialName}}')"
+                        class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                        title="Remove from wishlist">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+        {{/savedMaterials}}
+
+        {{^savedMaterials.length}}
+        <div class="bg-slate-50 rounded-xl border border-slate-200 p-8 text-center">
+            <i data-lucide="package-x" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+            <p class="text-slate-500">No saved materials yet</p>
+        </div>
+        {{/savedMaterials.length}}
+    </div>
+
+    <!-- Empty State (when both are empty) -->
+    {{^savedSuppliers.length}}
+    {{^savedMaterials.length}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+        <div class="inline-flex p-6 rounded-full bg-slate-100 text-slate-400 mb-4">
+            <i data-lucide="heart-off" class="w-12 h-12"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-700 mb-2">Your Wishlist is Empty</h3>
+        <p class="text-slate-500 mb-6">Start saving suppliers and materials you're interested in!</p>
+        <a href="/contractor/suppliers" class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <i data-lucide="search" class="w-5 h-5"></i>
+            <span>Browse Suppliers</span>
+        </a>
+    </div>
+    {{/savedMaterials.length}}
+    {{/savedSuppliers.length}}
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-bold text-slate-800 mb-3">Confirm Removal</h3>
+        <p class="text-slate-600 mb-6" id="confirmMessage"></p>
+        <div class="flex gap-3 justify-end">
+            <button onclick="closeConfirmModal()" class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                Cancel
+            </button>
+            <button id="confirmBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                Remove
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let pendingRemoval = null;
+
+function confirmRemoveSupplier(supplierId, supplierName) {
+    pendingRemoval = { type: 'supplier', id: supplierId };
+    document.getElementById('confirmMessage').textContent =
+        `Are you sure you want to remove "${supplierName}" from your wishlist?`;
+    document.getElementById('confirmModal').classList.remove('hidden');
+
+    document.getElementById('confirmBtn').onclick = async () => {
+        await toggleSaveSupplier(supplierId);
+        closeConfirmModal();
+        location.reload();
+    };
+}
+
+function confirmRemoveMaterial(materialId, materialName) {
+    pendingRemoval = { type: 'material', id: materialId };
+    document.getElementById('confirmMessage').textContent =
+        `Are you sure you want to remove "${materialName}" from your wishlist?`;
+    document.getElementById('confirmModal').classList.remove('hidden');
+
+    document.getElementById('confirmBtn').onclick = async () => {
+        await toggleSaveMaterial(materialId, null);
+        closeConfirmModal();
+        location.reload();
+    };
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+    pendingRemoval = null;
+}
+
+async function toggleSaveSupplier(supplierId) {
+    try {
+        await fetch(`/contractor/wishlist/supplier/${supplierId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (err) {
+        console.error('Error removing supplier:', err);
+    }
+}
+
+async function toggleSaveMaterial(materialId, supplierId) {
+    try {
+        await fetch(`/contractor/wishlist/material/${materialId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ supplierContext: supplierId })
+        });
+    } catch (err) {
+        console.error('Error removing material:', err);
+    }
+}
+
+// Initialize Lucide icons
+lucide.createIcons();
+</script>

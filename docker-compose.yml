@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_DATABASE: assignment_db
     volumes:
-      - mysql_data_buildlink:/var/lib/mysql
+      - mysql_data_buildlink_002:/var/lib/mysql
       - ./BuildLink/DB清理/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "3306:3306"
@@ -48,7 +48,7 @@ services:
     command: nodemon -L app.js
 
 volumes:
-  mysql_data_buildlink:
+  mysql_data_buildlink_002:
     external: false
 
 networks:
