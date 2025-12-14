@@ -6,6 +6,7 @@ const https = require('https');
 // const config = require('./config'); // 原始程式碼
 const mysql = require('mysql2/promise');
 const contractorRouter = require('./routes/contractor');
+const supplierRouter = require('./routes/supplier');
 
 // ★★★ 修正 Config 載入邏輯 ★★★
 // 當使用 Docker Volumes 時，容器內的 config.js 可能會被本機資料夾覆蓋而消失
@@ -65,24 +66,46 @@ app.get('/forgot-password', (req, res) => {
 
 // --- 認證路由 ---
 
-// 登入 (只允許 Contractors 表中的使用者)
+// 登入 (支援 Contractors 和 Suppliers)
 app.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body; // 前端 input name 需改為 email
-        
-        const [rows] = await pool.execute('SELECT * FROM Contractors WHERE Email = ?', [email]);
-        
-        if (rows.length === 0 || rows[0].Password !== password) {
-            res.cookie('error', '帳號或密碼錯誤', { maxAge: 10000 });
-            return res.redirect('/login');
+        const { email, password, userType } = req.body;
+
+        const isSupplier = userType === 'supplier';
+
+        if (isSupplier) {
+            // Supplier login - query by Email
+            const [rows] = await pool.execute('SELECT * FROM Suppliers WHERE Email = ?', [email]);
+
+            if (rows.length === 0 || rows[0].Password !== password) {
+                res.cookie('error', 'Invalid email or password', { maxAge: 10000 });
+                return res.redirect('/login');
+            }
+
+            const supplier = rows[0];
+            res.cookie('loggedIn', 'true', { signed: true });
+            res.cookie('userId', supplier.SupplierID, { signed: true });
+            res.cookie('username', supplier.SupplierName, { signed: true });
+            res.cookie('userType', 'supplier', { signed: true });
+
+            res.redirect('/supplier/dashboard');
+        } else {
+            // Contractor login
+            const [rows] = await pool.execute('SELECT * FROM Contractors WHERE Email = ?', [email]);
+
+            if (rows.length === 0 || rows[0].Password !== password) {
+                res.cookie('error', 'Invalid email or password', { maxAge: 10000 });
+                return res.redirect('/login');
+            }
+
+            const user = rows[0];
+            res.cookie('loggedIn', 'true', { signed: true });
+            res.cookie('userId', user.ContractorID, { signed: true });
+            res.cookie('username', user.Name, { signed: true });
+            res.cookie('userType', 'contractor', { signed: true });
+
+            res.redirect('/contractor/dashboard');
         }
-
-        const user = rows[0];
-        res.cookie('loggedIn', 'true', { signed: true });
-        res.cookie('userId', user.ContractorID, { signed: true });
-        res.cookie('username', user.Name, { signed: true });
-
-        res.redirect('/contractor/dashboard');
 
     } catch (err) {
         console.error(err);
@@ -147,6 +170,7 @@ app.get('/logout', (req, res) => {
     res.clearCookie('loggedIn');
     res.clearCookie('userId');
     res.clearCookie('username');
+    res.clearCookie('userType');
     res.redirect('/login');
 });
 
@@ -161,7 +185,22 @@ const checkLogin = (req, res, next) => {
     }
 };
 
+const checkSupplierLogin = (req, res, next) => {
+    const isLoggedIn = req.signedCookies.loggedIn === 'true';
+    const isSupplier = req.signedCookies.userType === 'supplier';
+
+    if (isLoggedIn && isSupplier) {
+        res.locals.username = req.signedCookies.username;
+        res.locals.userId = req.signedCookies.userId;
+        res.locals.userType = 'supplier';
+        next();
+    } else {
+        res.redirect('/login');
+    }
+};
+
 app.use('/contractor', checkLogin, contractorRouter);
+app.use('/supplier', checkSupplierLogin, supplierRouter);
 
 const port = 80;
 app.listen(port, () => console.log(`BuildLink Marketplace running on port ${port}`));

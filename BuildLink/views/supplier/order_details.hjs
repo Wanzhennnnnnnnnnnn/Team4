@@ -1,0 +1,220 @@
+<div class="space-y-6 max-w-4xl mx-auto">
+
+    <div class="flex items-center justify-between">
+        <a href="/supplier/orders" class="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Orders
+        </a>
+        <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-lg text-sm font-medium {{order.StatusColor}}">{{order.Status}}</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="bg-gradient-to-r from-[#5B8DEF] to-[#4A7DE0] p-6 text-white">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm text-blue-100 uppercase tracking-wider font-medium">Order</p>
+                    <h1 class="text-2xl font-bold">#PO-{{order.POID}}</h1>
+                    <p class="text-sm text-blue-100 mt-1">{{order.FormattedDate}}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-blue-100">Total Amount</p>
+                    <p class="text-3xl font-bold">NT$ {{order.FormattedTotal}}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="mb-8 relative px-4">
+                <div class="absolute top-1/2 left-0 w-full h-1.5 bg-slate-100 -translate-y-1/2 rounded-full z-0"></div>
+                <div class="absolute top-1/2 left-0 h-1.5 bg-[#5B8DEF] -translate-y-1/2 rounded-full z-0 transition-all duration-700 ease-out"
+                     style="width: {{order.ProgressWidth}}"></div>
+
+                <div class="relative z-10 flex justify-between w-full">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-[#5B8DEF] border-[#5B8DEF] text-white shadow-sm">
+                            <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600">Ordered</span>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2
+                            {{#order.IsProcessing}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/order.IsProcessing}}
+                            {{#order.IsShipped}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/order.IsShipped}}
+                            {{#order.IsDelivered}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/order.IsDelivered}}
+                            {{^order.IsProcessing}}{{^order.IsShipped}}{{^order.IsDelivered}}bg-white border-slate-200 text-slate-300{{/order.IsDelivered}}{{/order.IsShipped}}{{/order.IsProcessing}}
+                            shadow-sm">
+                            <i data-lucide="package" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600">Processing</span>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2
+                            {{#order.IsShipped}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/order.IsShipped}}
+                            {{#order.IsDelivered}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/order.IsDelivered}}
+                            {{^order.IsShipped}}{{^order.IsDelivered}}bg-white border-slate-200 text-slate-300{{/order.IsDelivered}}{{/order.IsShipped}}
+                            shadow-sm">
+                            <i data-lucide="truck" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600">Shipped</span>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2
+                            {{#order.IsDelivered}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/order.IsDelivered}}
+                            {{^order.IsDelivered}}bg-white border-slate-200 text-slate-300{{/order.IsDelivered}}
+                            shadow-sm">
+                            <i data-lucide="check" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600">Delivered</span>
+                    </div>
+                </div>
+            </div>
+
+            {{^order.IsDelivered}}
+            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                <h3 class="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    Update Order Status
+                </h3>
+                <form action="/supplier/orders/{{order.POID}}/update-status" method="POST" class="flex flex-wrap gap-2">
+                    {{#order.IsPending}}
+                    <button type="submit" name="status" value="Processing" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
+                        <i data-lucide="package" class="w-4 h-4"></i> Mark as Processing
+                    </button>
+                    {{/order.IsPending}}
+
+                    {{#order.IsProcessing}}
+                    <button type="submit" name="status" value="Shipped" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center gap-2">
+                        <i data-lucide="truck" class="w-4 h-4"></i> Mark as Shipped
+                    </button>
+                    {{/order.IsProcessing}}
+
+                    {{#order.IsShipped}}
+                    <button type="submit" name="status" value="Delivered" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4"></i> Mark as Delivered
+                    </button>
+                    {{/order.IsShipped}}
+
+                    {{^order.IsCancelled}}
+                    <button type="submit" name="status" value="Cancelled" class="px-4 py-2 bg-white text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors flex items-center gap-2">
+                        <i data-lucide="x" class="w-4 h-4"></i> Cancel Order
+                    </button>
+                    {{/order.IsCancelled}}
+                </form>
+            </div>
+            {{/order.IsDelivered}}
+
+            {{#order.TrackingNumber}}
+            <div class="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-3">
+                <i data-lucide="truck" class="w-5 h-5 text-purple-600"></i>
+                <div>
+                    <p class="text-xs text-purple-600 font-medium">Tracking Number</p>
+                    <p class="font-mono font-bold text-purple-800">{{order.TrackingNumber}}</p>
+                </div>
+            </div>
+            {{/order.TrackingNumber}}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="user" class="w-4 h-4 text-[#5B8DEF]"></i>
+                Contractor Information
+            </h3>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs text-slate-500">Name</p>
+                    <p class="font-semibold text-slate-800">{{order.ContractorName}}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Email</p>
+                    <p class="font-semibold text-slate-800">{{order.ContractorEmail}}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Phone</p>
+                    <p class="font-semibold text-slate-800">{{order.ContractorPhone}}</p>
+                </div>
+                <a href="/supplier/messages/{{order.ContractorID}}" class="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline mt-2">
+                    <i data-lucide="message-square" class="w-4 h-4"></i>
+                    Send Message
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="map-pin" class="w-4 h-4 text-[#5B8DEF]"></i>
+                Shipping Information
+            </h3>
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs text-slate-500">Project</p>
+                    <p class="font-semibold text-slate-800">{{order.ProjectName}}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Location</p>
+                    <p class="font-semibold text-slate-800">{{order.ProjectLocation}}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">Shipping Address</p>
+                    <p class="font-semibold text-slate-800">{{order.ShippingAddress}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="list" class="w-5 h-5 text-[#5B8DEF]"></i>
+                Order Items
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="text-left text-xs font-bold text-slate-500 uppercase tracking-wider px-6 py-3">Material</th>
+                        <th class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider px-6 py-3">Quantity</th>
+                        <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wider px-6 py-3">Unit Price</th>
+                        <th class="text-right text-xs font-bold text-slate-500 uppercase tracking-wider px-6 py-3">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {{#items}}
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <div class="font-medium text-slate-800">{{MaterialName}}</div>
+                            <div class="text-xs text-slate-500">{{UnitName}}</div>
+                        </td>
+                        <td class="px-6 py-4 text-center font-medium text-slate-800">{{Quantity}}</td>
+                        <td class="px-6 py-4 text-right font-medium text-slate-800">NT$ {{UnitPrice}}</td>
+                        <td class="px-6 py-4 text-right font-bold text-slate-800">NT$ {{Subtotal}}</td>
+                    </tr>
+                    {{/items}}
+                </tbody>
+                <tfoot class="bg-slate-50">
+                    <tr>
+                        <td colspan="3" class="px-6 py-4 text-right font-bold text-slate-800">Total</td>
+                        <td class="px-6 py-4 text-right font-bold text-lg text-[#5B8DEF]">NT$ {{order.FormattedTotal}}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    {{#order.Notes}}
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i data-lucide="file-text" class="w-4 h-4 text-[#5B8DEF]"></i>
+            Order Notes
+        </h3>
+        <p class="text-slate-600">{{order.Notes}}</p>
+    </div>
+    {{/order.Notes}}
+</div>

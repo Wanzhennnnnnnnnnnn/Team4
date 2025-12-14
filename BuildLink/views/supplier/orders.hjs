@@ -1,0 +1,144 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">Orders</h2>
+            <p class="text-slate-500 text-sm mt-1">Manage incoming orders from contractors.</p>
+        </div>
+
+        <a href="/supplier/dashboard" class="text-sm text-slate-500 hover:text-blue-600 flex items-center gap-1 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back
+        </a>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-6">
+        <a href="/supplier/orders"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {{^filterStatus}}bg-[#5B8DEF] text-white{{/filterStatus}} {{#filterStatus}}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{{/filterStatus}}">
+            All ({{allCount}})
+        </a>
+        <a href="/supplier/orders?status=Pending"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors {{#filterStatus}}{{#IsPendingFilter}}bg-yellow-500 text-white{{/IsPendingFilter}}{{^IsPendingFilter}}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{{/IsPendingFilter}}{{/filterStatus}} {{^filterStatus}}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{{/filterStatus}}">
+            Pending ({{pendingCount}})
+        </a>
+        <a href="/supplier/orders?status=Processing"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+            Processing ({{processingCount}})
+        </a>
+        <a href="/supplier/orders?status=Shipped"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+            Shipped ({{shippedCount}})
+        </a>
+        <a href="/supplier/orders?status=Delivered"
+           class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+            Delivered ({{deliveredCount}})
+        </a>
+    </div>
+
+    {{^orders}}
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+            <i data-lucide="package-x" class="w-8 h-8"></i>
+        </div>
+        <h3 class="text-lg font-bold text-slate-800">No orders found</h3>
+        <p class="text-slate-500 mb-6">Try selecting a different filter or wait for new orders.</p>
+        <a href="/supplier/orders" class="text-sm text-blue-600 hover:underline">Clear Filters</a>
+    </div>
+    {{/orders}}
+
+    <div class="space-y-4">
+        {{#orders}}
+        <a href="/supplier/orders/{{POID}}" class="block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+
+            <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex flex-wrap gap-4 justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="bg-white p-2 rounded-lg border border-slate-200 text-[#5B8DEF]">
+                        <i data-lucide="package" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Order ID</p>
+                        <p class="text-sm font-mono font-semibold text-slate-800">#PO-{{POID}}</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-6 text-sm">
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Date</p>
+                        <p class="font-semibold text-slate-800">{{FormattedDate}}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Total</p>
+                        <p class="font-semibold text-slate-800">NT$ {{FormattedTotal}}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Status</p>
+                        <span class="px-2 py-0.5 rounded text-xs font-medium {{StatusColor}}">{{Status}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            {{ContractorName}}
+                        </h3>
+                        <p class="text-sm text-slate-500 mt-1">Project: {{ProjectName}}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400">Est. Arrival</span>
+                        <p class="font-semibold text-sm {{#IsDelivered}}text-green-600{{/IsDelivered}} {{^IsDelivered}}text-slate-800{{/IsDelivered}}">{{FormattedArrival}}</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 relative px-2">
+                    <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full z-0"></div>
+                    <div class="absolute top-1/2 left-0 h-1 bg-[#5B8DEF] -translate-y-1/2 rounded-full z-0 transition-all duration-700 ease-out"
+                         style="width: {{ProgressWidth}}"></div>
+
+                    <div class="relative z-10 flex justify-between w-full">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center border-2 bg-[#5B8DEF] border-[#5B8DEF] text-white transition-colors shadow-sm">
+                                <i data-lucide="clipboard-list" class="w-3 h-3"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-400">Ordered</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center border-2
+                                {{#IsProcessing}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/IsProcessing}}
+                                {{#IsShipped}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/IsShipped}}
+                                {{#IsDelivered}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/IsDelivered}}
+                                {{^IsProcessing}}{{^IsShipped}}{{^IsDelivered}}bg-white border-slate-200 text-slate-300{{/IsDelivered}}{{/IsShipped}}{{/IsProcessing}}
+                                transition-colors shadow-sm">
+                                <i data-lucide="package" class="w-3 h-3"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-400">Processing</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center border-2
+                                {{#IsShipped}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/IsShipped}}
+                                {{#IsDelivered}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/IsDelivered}}
+                                {{^IsShipped}}{{^IsDelivered}}bg-white border-slate-200 text-slate-300{{/IsDelivered}}{{/IsShipped}}
+                                transition-colors shadow-sm">
+                                <i data-lucide="truck" class="w-3 h-3"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-400">Shipped</span>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center border-2
+                                {{#IsDelivered}}bg-[#5B8DEF] border-[#5B8DEF] text-white{{/IsDelivered}}
+                                {{^IsDelivered}}bg-white border-slate-200 text-slate-300{{/IsDelivered}}
+                                transition-colors shadow-sm">
+                                <i data-lucide="check" class="w-3 h-3"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-slate-400">Delivered</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+        {{/orders}}
+    </div>
+</div>

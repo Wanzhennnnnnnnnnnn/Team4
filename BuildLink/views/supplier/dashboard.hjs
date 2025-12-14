@@ -1,0 +1,183 @@
+<div class="flex flex-col gap-6 h-full">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+
+        <div class="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-0.5">Total Orders</p>
+                <h3 class="text-2xl font-bold text-slate-800">{{totalOrders}}</h3>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-[#5B8DEF] flex items-center justify-center text-white shadow-sm">
+                <i data-lucide="package" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-0.5">Pending Orders</p>
+                <h3 class="text-2xl font-bold text-slate-800">{{pendingOrders}}</h3>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-[#F59E0B] flex items-center justify-center text-white shadow-sm">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-0.5">Total Revenue</p>
+                <h3 class="text-2xl font-bold text-slate-800 tracking-tight">NT$ {{totalRevenue}}</h3>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-[#10B981] flex items-center justify-center text-white shadow-sm">
+                <i data-lucide="trending-up" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-medium text-slate-500 mb-0.5">Active Contractors</p>
+                <h3 class="text-2xl font-bold text-slate-800">{{activeContractors}}</h3>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-[#8B5CF6] flex items-center justify-center text-white shadow-sm">
+                <i data-lucide="users" class="w-5 h-5"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+
+        <div class="lg:col-span-2 bg-white rounded-xl p-5 border border-[#E2E8F0] shadow-sm flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-[#5B8DEF]"></i>
+                    Revenue Overview
+                </h2>
+                <span class="text-xs text-slate-400">Last 6 Months</span>
+            </div>
+
+            <div class="flex-1 relative w-full h-64">
+                {{#hasChartData}}
+                <canvas id="revenueChart"></canvas>
+                {{/hasChartData}}
+
+                {{^hasChartData}}
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                    <i data-lucide="bar-chart-2" class="w-10 h-10 mb-2 opacity-50"></i>
+                    <p class="text-sm">Not enough data to display chart</p>
+                </div>
+                {{/hasChartData}}
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-5 border border-[#E2E8F0] shadow-sm flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between mb-4 shrink-0">
+                <h2 class="text-lg font-bold text-slate-800">Recent Orders</h2>
+                <a href="/supplier/orders" class="text-xs text-blue-600 hover:underline font-medium transition-colors">View All</a>
+            </div>
+
+            <div class="flex-1 flex flex-col overflow-y-auto pr-1 space-y-3">
+                {{#recentOrders}}
+                <a href="/supplier/orders/{{POID}}" class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100 hover:bg-[#F0F5FF] hover:border-[#E8F0FE] transition-colors group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-md bg-white flex items-center justify-center text-[#5B8DEF] shadow-sm border border-slate-100 group-hover:scale-110 transition-transform">
+                            <i data-lucide="package" class="w-4 h-4"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="font-bold text-slate-800 text-xs truncate max-w-[120px]">{{ContractorName}}</h4>
+                            <p class="text-[10px] text-slate-500 truncate">{{ProjectName}}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="font-bold text-slate-800 text-xs">NT$ {{TotalAmount}}</div>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded {{StatusColor}}">{{Status}}</span>
+                    </div>
+                </a>
+                {{/recentOrders}}
+
+                {{^recentOrders}}
+                <div class="flex flex-col items-center justify-center text-slate-400 h-full py-4">
+                    <p class="text-xs font-medium text-slate-500">No orders yet</p>
+                </div>
+                {{/recentOrders}}
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+        <a href="/supplier/orders" class="group bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#5B8DEF]/50 transition-all flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-[#E8F0FE] text-[#5B8DEF] flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shrink-0">
+                <i data-lucide="package" class="w-6 h-6"></i>
+            </div>
+            <div class="text-left">
+                <h3 class="text-sm font-bold text-slate-800">Manage Orders</h3>
+                <p class="text-xs text-slate-500">View and update order status</p>
+            </div>
+        </a>
+
+        <a href="/supplier/messages" class="group bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#5B8DEF]/50 transition-all flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-[#E8F0FE] text-[#5B8DEF] flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shrink-0">
+                <i data-lucide="message-square" class="w-6 h-6"></i>
+            </div>
+            <div class="text-left">
+                <h3 class="text-sm font-bold text-slate-800">Messages</h3>
+                <p class="text-xs text-slate-500">Chat with contractors</p>
+            </div>
+        </a>
+
+        <a href="/supplier/profile" class="group bg-white rounded-xl p-4 border border-[#E2E8F0] shadow-sm hover:shadow-md hover:border-[#5B8DEF]/50 transition-all flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-[#E8F0FE] text-[#5B8DEF] flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shrink-0">
+                <i data-lucide="user" class="w-6 h-6"></i>
+            </div>
+            <div class="text-left">
+                <h3 class="text-sm font-bold text-slate-800">Profile Settings</h3>
+                <p class="text-xs text-slate-500">Manage your information</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {{#hasChartData}}
+    const ctx = document.getElementById('revenueChart');
+
+    const labels = {{{chartLabels}}};
+    const data = {{{chartData}}};
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Revenue (NT$)',
+                data: data,
+                backgroundColor: 'rgba(91, 141, 239, 0.7)',
+                borderColor: 'rgba(91, 141, 239, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    {{/hasChartData}}
+</script>
