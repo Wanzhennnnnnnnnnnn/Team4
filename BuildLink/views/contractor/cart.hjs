@@ -1,0 +1,103 @@
+<div class="max-w-4xl mx-auto space-y-6 pb-24">
+    
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8"> <!-- 增加 mb-8 拉開距離 -->
+        <h1 class="text-3xl font-bold text-slate-800">Shopping Cart</h1> <!-- 加大標題 -->
+        {{#hasItems}}
+        <a href="/contractor/cart/clear" class="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1 transition-colors">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            Clear Cart
+        </a>
+        {{/hasItems}}
+    </div>
+
+    {{#hasItems}}
+    <div class="space-y-6">
+        {{#cart}}
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"> <!-- 改圓角為 rounded-2xl -->
+            <div class="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#D4A5A5] shadow-sm"> <!-- 調整圖示樣式 -->
+                        <i data-lucide="store" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">{{supplierName}}</h3>
+                        <div class="flex flex-wrap gap-2 text-sm text-slate-500 mt-1 items-center">
+                            <span>Project: <span class="font-medium text-slate-700">{{projectId}}</span></span>
+                            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                            {{#workItemId}}
+                            <span class="flex items-center gap-1 text-[#D4A5A5] font-medium bg-[#FFF5F5] px-2 py-0.5 rounded border border-[#FFE5E5]">
+                                <i data-lucide="hammer" class="w-3 h-3"></i> Item #{{workItemId}}
+                            </span>
+                            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                            {{/workItemId}}
+                            <span>Delivery: {{deliveryDate}}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 font-medium uppercase tracking-wider block mb-1">Subtotal</span>
+                    <span class="font-bold text-slate-900 text-xl">${{subtotal}}</span>
+                </div>
+            </div>
+
+            <div class="divide-y divide-slate-50">
+                {{#items}}
+                <div class="px-6 py-5 flex items-center justify-between hover:bg-slate-50/30 transition-colors">
+                    <div class="flex items-center gap-5">
+                        <div class="w-14 h-14 bg-[#F8F9FA] rounded-xl flex items-center justify-center text-slate-400 border border-slate-100">
+                            <i data-lucide="package" class="w-7 h-7"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-slate-800 text-lg mb-1">{{name}}</div>
+                            <div class="text-sm text-slate-500 font-medium bg-slate-100 inline-block px-2 py-0.5 rounded text-xs">
+                                ${{price}} × {{qty}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="font-bold text-slate-800 text-lg">
+                        <script>document.write('$' + ({{price}} * {{qty}}).toLocaleString())</script>
+                    </div>
+                </div>
+                {{/items}}
+            </div>
+        </div>
+        {{/cart}}
+    </div>
+
+    <!-- Checkout Bar -->
+    <div class="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] p-6 z-20">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div>
+                <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Grand Total</p>
+                <div class="text-4xl font-bold text-slate-900">${{grandTotal}}</div>
+            </div>
+            
+            <form action="/contractor/cart/checkout" method="POST">
+                <button type="submit" 
+                        class="px-10 py-4 bg-[#D4A5A5] text-white font-bold rounded-xl shadow-lg shadow-[#D4A5A5]/30 hover:bg-[#C9A0A0] transition-all transform hover:-translate-y-0.5 flex items-center gap-3 text-lg">
+                    <span>Place Order</span>
+                    <i data-lucide="arrow-right" class="w-6 h-6"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {{/hasItems}}
+
+    {{^hasItems}}
+    <!-- Empty State -->
+    <div class="flex flex-col items-center justify-center min-h-[60vh]">
+        <div class="bg-white p-12 rounded-3xl shadow-sm border border-slate-100 text-center max-w-md w-full">
+            <div class="inline-flex p-6 rounded-full bg-slate-50 text-slate-300 mb-6">
+                <i data-lucide="shopping-cart" class="w-16 h-16"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Your cart is empty</h2>
+            <p class="text-slate-500 mb-8 leading-relaxed">Looks like you haven't added any materials yet. Start exploring to find what you need.</p>
+            <!-- ★★★ 修改：將按鈕顏色改為 #D4A5A5 (主題色) ★★★ -->
+            <a href="/contractor/materials" class="w-full inline-flex justify-center items-center gap-2 px-6 py-4 bg-[#D4A5A5] text-white rounded-xl hover:bg-[#C9A0A0] transition-all font-bold text-lg shadow-lg shadow-[#D4A5A5]/30">
+                Browse Materials
+            </a>
+        </div>
+    </div>
+    {{/hasItems}}
+</div>

@@ -7,7 +7,7 @@ DROP TABLE IF EXISTS PurchaseOrder;
 DROP TABLE IF EXISTS SupplierMaterial;
 DROP TABLE IF EXISTS Materials;
 DROP TABLE IF EXISTS Suppliers;
-DROP TABLE IF EXISTS Projects;    -- [新增]
+DROP TABLE IF EXISTS Projects;
 DROP TABLE IF EXISTS Contractors;
 DROP TABLE IF EXISTS Categories;
 DROP TABLE IF EXISTS Units;
@@ -105,3 +105,63 @@ CREATE TABLE IF NOT EXISTS POItems (
     FOREIGN KEY (POID) REFERENCES PurchaseOrder(POID),
     FOREIGN KEY (MaterialID) REFERENCES Materials(MaterialID)
 );
+
+-- 10.建立工項
+CREATE TABLE WorkItems (
+    WorkItemID INT AUTO_INCREMENT PRIMARY KEY,
+    ProjectID INT,
+    Name VARCHAR(255) NOT NULL,
+    Status VARCHAR(50) DEFAULT 'Pending',
+    Description TEXT,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ProjectID) REFERENCES Projects(ProjectID) ON DELETE CASCADE
+);
+
+ALTER TABLE Projects 
+ADD COLUMN Description TEXT,
+ADD COLUMN EndDate DATE,
+ADD COLUMN Budget DECIMAL(15,2) DEFAULT 0,
+ADD COLUMN ClientName VARCHAR(255),
+ADD COLUMN ClientContact VARCHAR(255);
+
+ALTER TABLE WorkItems 
+ADD COLUMN EstimatedCost DECIMAL(15,2) DEFAULT 0,
+ADD COLUMN StartDate DATE,
+ADD COLUMN EndDate DATE,
+ADD COLUMN Notes TEXT;
+
+ALTER TABLE PurchaseOrder 
+ADD COLUMN WorkItemID INT,
+ADD CONSTRAINT fk_po_workitem FOREIGN KEY (WorkItemID) REFERENCES WorkItems(WorkItemID) ON DELETE SET NULL;
+
+-- 11.新增欄位 (工項關聯、物流單號、預計抵達日)
+ALTER TABLE PurchaseOrder 
+ADD COLUMN WorkItemID INT DEFAULT NULL,
+ADD COLUMN TrackingNumber VARCHAR(50) DEFAULT NULL,
+ADD COLUMN EstimatedArrival DATE DEFAULT NULL;
+
+-- 12. 建立工項的外鍵關聯
+ALTER TABLE PurchaseOrder 
+ADD CONSTRAINT PurchaseOrder_ibfk_4 FOREIGN KEY (WorkItemID) REFERENCES WorkItems (WorkItemID);
+
+-- 13. 建立通知資料表
+CREATE TABLE Notifications (
+    NotificationID INT AUTO_INCREMENT PRIMARY KEY,
+    ContractorID INT NOT NULL,
+    Title VARCHAR(100),
+    Message TEXT,
+    Link VARCHAR(255),
+    IsRead TINYINT(1) DEFAULT 0,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ContractorID) REFERENCES Contractors(ContractorID) ON DELETE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 14.建立價格歷史表格
+-- 注意：這裡使用 CHAR(8) 是為了配合你原本 materials 表格的格式
+CREATE TABLE PriceHistory (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    material_id CHAR(8) NOT NULL,
+    price DECIMAL(10, 2) NOT NULL,
+    recorded_at DATE NOT NULL
+);
+

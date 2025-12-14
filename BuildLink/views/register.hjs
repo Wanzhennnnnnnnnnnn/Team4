@@ -5,7 +5,7 @@
     <style>
         body {
             font-family: 'Inter', Arial, sans-serif;
-            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            background: linear-gradient(135deg, #FDFBFB 0%, #F9F3F3 100%); /* 主題背景 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,23 +18,23 @@
         .login-container {
             background-color: #fff;
             padding: 35px 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(212, 165, 165, 0.15), 0 0 0 1px rgba(212, 165, 165, 0.1);
             width: 400px;
-            border: 1px solid #e0e6ed;
+            border: 1px solid #F5E6E8;
             text-align: center;
         }
 
         h1 {
             text-align: center;
-            color: #000;
+            color: #2D3748;
             margin-bottom: 10px;
             font-size: 1.8em;
             font-weight: 800;
         }
         
         .subtitle {
-            color: #666;
+            color: #718096;
             margin-bottom: 30px;
             font-size: 0.95em;
         }
@@ -56,57 +56,60 @@
             width: 100%;
             padding: 12px;
             border: 1px solid #cbd5e0;
-            border-radius: 8px;
+            border-radius: 10px;
             box-sizing: border-box;
             font-size: 1em;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #3182ce;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            border-color: #D4A5A5; /* 主題色 */
+            box-shadow: 0 0 0 3px rgba(212, 165, 165, 0.2);
         }
 
         button {
             width: 100%;
             padding: 12px;
-            background-color: #3182ce;
+            background-color: #D4A5A5; /* 主題色 */
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.1s;
             margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(212, 165, 165, 0.3);
         }
 
         button:hover {
-            background-color: #2b6cb0;
+            background-color: #C9A0A0;
+            transform: translateY(-1px);
         }
         
         .error-message {
-            background-color: #fed7d7;
-            color: #c53030;
+            background-color: #FFF5F5;
+            color: #C53030;
             padding: 10px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 20px;
             font-size: 0.9em;
             text-align: left;
+            border: 1px solid #FEB2B2;
         }
 
         .register-link {
             text-align: center;
             font-size: 0.9em;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #e5e7eb;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #F5E6E8;
             color: #666;
         }
 
         .register-link a {
-            color: #3182ce;
+            color: #D4A5A5; /* 主題色 */
             text-decoration: none;
             font-weight: 600;
             margin-left: 5px;
@@ -114,12 +117,20 @@
         
         .register-link a:hover {
             text-decoration: underline;
+            color: #C9A0A0;
         }
     </style>
 </head>
 
 <body>
     <div class="login-container">
+        <!-- Icon -->
+        {{!-- <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+            <div style="width: 48px; height: 48px; background-color: #FFF5F5; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A5A5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+            </div>
+        </div> --}}
+
         <h1>Join BuildLink</h1>
         <p class="subtitle">Start sourcing materials and managing projects.</p>
 

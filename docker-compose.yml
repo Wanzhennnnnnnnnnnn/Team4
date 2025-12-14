@@ -33,7 +33,7 @@ services:
       DB_USER: root
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       DB_NAME: assignment_db
-      NODE_ENV: production
+      NODE_ENV: development
     ports:
       - "8080:80"
     depends_on:
@@ -41,6 +41,11 @@ services:
         condition: service_healthy
     networks:
       - buildlink-net
+    # ★★★ 修正：解除註解並正確縮排 ★★★
+    volumes:
+      - ./BuildLink:/app
+      - /app/node_modules
+    command: nodemon -L app.js
 
 volumes:
   mysql_data_buildlink_002:

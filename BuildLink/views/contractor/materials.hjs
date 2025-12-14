@@ -1,0 +1,94 @@
+<div class="space-y-6">
+    
+    <!-- ★★★ 修改：已移除上方的 activeWorkItemName (Active Purchase Session) 提示區塊 ★★★ -->
+
+    <div>
+        <h1 class="text-2xl font-bold text-slate-900">Materials Catalog</h1>
+        <p class="text-slate-500 text-sm mt-1">{{totalCount}} materials found</p>
+    </div>
+
+    <form action="/contractor/materials" method="GET" class="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-2">
+        
+        <!-- 這些隱藏欄位確保搜尋時不會遺失當前的 Project ID 和 Work Item ID -->
+        {{#queryParams.projectId}}<input type="hidden" name="projectId" value="{{queryParams.projectId}}">{{/queryParams.projectId}}
+        {{#queryParams.workItemId}}<input type="hidden" name="workItemId" value="{{queryParams.workItemId}}">{{/queryParams.workItemId}}
+
+        <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
+            <input type="text" name="q" value="{{searchQuery}}" placeholder="Search material name or code (#ID)..." 
+                   class="w-full h-12 pl-10 pr-4 rounded-lg border border-transparent bg-slate-50 focus:bg-white focus:border-[#D4A5A5] focus:ring-2 focus:ring-[#F5E6E8] outline-none transition-all text-sm">
+        </div>
+
+        <div class="relative md:w-64">
+            <select name="category" onchange="this.form.submit()" 
+                    class="w-full h-12 pl-4 pr-10 rounded-lg border border-slate-200 bg-white text-slate-700 focus:border-[#D4A5A5] focus:ring-2 focus:ring-[#F5E6E8] outline-none appearance-none cursor-pointer text-sm">
+                <option value="">All Categories</option>
+                {{#categories}}
+                <option value="{{CategoryID}}" {{#isSelected}}selected{{/isSelected}}>{{CategoryName}}</option>
+                {{/categories}}
+            </select>
+            <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+        </div>
+        
+        <button type="submit" class="px-6 h-12 bg-[#D4A5A5] text-white font-medium rounded-lg hover:bg-[#C9A0A0] transition-colors shadow-sm">
+            Search
+        </button>
+    </form>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold">
+                        <th class="px-6 py-4">Material Name</th>
+                        <th class="px-6 py-4 w-[1%] whitespace-nowrap">Category</th>
+                        <th class="px-6 py-4 w-[1%] whitespace-nowrap">Suppliers</th>
+                        <th class="px-6 py-4 w-[1%] whitespace-nowrap text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {{#materials}}
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-[#FFF5F5] flex items-center justify-center text-[#D4A5A5] shrink-0">
+                                    <i data-lucide="package" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <span class="font-medium text-slate-900 block">{{MaterialName}}</span>
+                                    <span class="text-xs text-slate-400 font-mono">#{{MaterialID}}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                {{CategoryName}}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
+                            {{SupplierCount}} suppliers
+                        </td>
+                        <td class="px-6 py-4 text-center whitespace-nowrap">
+                            <a href="/contractor/materials/{{MaterialID}}?projectId={{../queryParams.projectId}}&workItemId={{../queryParams.workItemId}}" 
+                               class="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-[#D4A5A5] rounded-lg hover:bg-[#C9A0A0] transition-colors shadow-sm">
+                                View Details
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {{/materials}}
+                    {{^materials}}
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center text-slate-500">
+                            <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
+                                <i data-lucide="search-x" class="w-6 h-6"></i>
+                            </div>
+                            <p>No materials found matching your search.</p>
+                        </td>
+                    </tr>
+                    {{/materials}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

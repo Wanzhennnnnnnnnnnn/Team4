@@ -7,7 +7,7 @@
         /* --- Global & Background --- */
         body {
             font-family: 'Inter', Arial, sans-serif;
-            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            background: linear-gradient(135deg, #FDFBFB 0%, #F9F3F3 100%); /* 背景改為與 Layout 一致的暖色調 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -19,23 +19,23 @@
         .login-container {
             background-color: #fff;
             padding: 35px 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            border-radius: 16px; /* 圓角加大一點，符合整體風格 */
+            box-shadow: 0 8px 25px rgba(212, 165, 165, 0.15), 0 0 0 1px rgba(212, 165, 165, 0.1); /* 陰影帶一點主題色 */
             width: 350px;
-            border: 1px solid #e0e6ed;
+            border: 1px solid #F5E6E8; /* 邊框改淡粉色 */
             text-align: center;
         }
 
         h1 {
             text-align: center;
-            color: #000;
+            color: #2D3748;
             margin-bottom: 10px;
             font-size: 1.8em;
             font-weight: 800;
         }
         
         .subtitle {
-            color: #666;
+            color: #718096;
             margin-bottom: 30px;
             font-size: 0.95em;
         }
@@ -57,91 +57,109 @@
             width: 100%;
             padding: 12px;
             border: 1px solid #cbd5e0;
-            border-radius: 8px;
+            border-radius: 10px; /* 圓角調整 */
             box-sizing: border-box;
             font-size: 1em;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: #3182ce;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+            border-color: #D4A5A5; /* 主題色 */
+            box-shadow: 0 0 0 3px rgba(212, 165, 165, 0.2); /* 主題色光暈 */
         }
 
         button {
             width: 100%;
             padding: 12px;
-            background-color: #3182ce;
+            background-color: #D4A5A5; /* 主題色 */
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, transform 0.1s;
             margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(212, 165, 165, 0.3);
         }
 
         button:hover {
-            background-color: #2b6cb0;
+            background-color: #C9A0A0; /* 深一點的主題色 */
+            transform: translateY(-1px);
+        }
+        
+        button:active {
+            transform: translateY(0);
         }
         
         .error-message {
-            background-color: #fed7d7;
-            color: #c53030;
+            background-color: #FFF5F5;
+            color: #C53030;
             padding: 10px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 20px;
             font-size: 0.9em;
             text-align: left;
+            border: 1px solid #FEB2B2;
         }
         
         .success-message {
-            background-color: #c6f6d5;
+            background-color: #F0FFF4;
             color: #276749;
             padding: 10px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 20px;
             font-size: 0.9em;
             text-align: left;
+            border: 1px solid #9AE6B4;
         }
 
         .register-link {
             text-align: center;
             font-size: 0.9em;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #e5e7eb;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #F5E6E8;
             display: flex;
             justify-content: space-between; 
         }
 
         .register-link a {
-            color: #1a1a1a;
+            color: #D4A5A5; /* 主題色 */
             text-decoration: none;
             font-weight: 600;
+            transition: color 0.2s;
         }
         
         .register-link a:hover {
             text-decoration: underline;
+            color: #C9A0A0;
         }
         
         .forgot-link {
-            color: #718096;
+            color: #A0AEC0;
             text-decoration: none;
             font-size: 0.9em;
+            font-weight: normal !important;
         }
         
         .forgot-link:hover {
             text-decoration: underline;
-            color: #4a5568;
+            color: #718096;
         }
     </style>
 </head>
 
 <body>
     <div class="login-container">
+        {{!-- <!-- 加入 Logo Icon -->
+        <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+            <div style="width: 48px; height: 48px; background-color: #FFF5F5; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4A5A5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M12 6h.01"></path><path d="M12 10h.01"></path><path d="M12 14h.01"></path><path d="M16 10h.01"></path><path d="M16 14h.01"></path><path d="M8 10h.01"></path><path d="M8 14h.01"></path></svg>
+            </div>
+        </div> --}}
+        
         <h1>BuildLink</h1>
         <p class="subtitle">Contractor Procurement Portal</p>
 

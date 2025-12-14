@@ -1,26 +1,8 @@
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
-        <h2 class="text-2xl font-bold text-slate-800">Supplier Directory</h2>
-        
-        <!-- 搜尋表單 -->
-        <form action="/contractor/suppliers" method="GET" class="flex gap-2 w-full sm:w-auto">
-            <div class="relative">
-                <select name="type" class="h-full pl-3 pr-8 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none">
-                    <option value="supplier" {{#isTypeSupplier}}selected{{/isTypeSupplier}}>Supplier Name</option>
-                    <option value="material" {{#isTypeMaterial}}selected{{/isTypeMaterial}}>Material Name</option>
-                </select>
-                <i data-lucide="chevron-down" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none"></i>
-            </div>
-
-            <div class="relative flex-1 sm:w-64">
-                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4"></i>
-                <input type="text" name="q" value="{{searchQuery}}" placeholder="Search..." class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                Search
-            </button>
-        </form>
+    <!-- Header & Search -->
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Supplier Directory</h1>
+        <p class="text-slate-500 text-sm mt-1">{{suppliers.length}} suppliers available</p>
     </div>
 
     <!-- 搜尋結果提示 -->
@@ -32,75 +14,110 @@
     </div>
     {{/searchQuery}}
 
-    <!-- ★★★ 長條列表佈局 (List View) ★★★ -->
-    <div class="flex flex-col gap-4">
+    <!-- 搜尋區塊 -->
+    <form action="/contractor/suppliers" method="GET" class="bg-white p-2 rounded-xl border border-[#E8C5C5] shadow-sm flex flex-col md:flex-row gap-2">
+        <div class="relative md:w-48">
+            <select name="type" class="w-full h-12 pl-4 pr-10 rounded-lg border border-transparent bg-slate-50 focus:bg-white focus:border-[#D4A5A5] focus:ring-2 focus:ring-[#F5E6E8] outline-none appearance-none cursor-pointer text-sm text-slate-700 font-medium">
+                <option value="supplier" {{#isTypeSupplier}}selected{{/isTypeSupplier}}>Supplier Name</option>
+                <option value="material" {{#isTypeMaterial}}selected{{/isTypeMaterial}}>Material Name</option>
+            </select>
+            <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+        </div>
+
+        <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"></i>
+            <input type="text" name="q" value="{{searchQuery}}" placeholder="Search supplier name, ID or keywords..."
+                   class="w-full h-12 pl-10 pr-4 rounded-lg border border-transparent bg-slate-50 focus:bg-white focus:border-[#D4A5A5] focus:ring-2 focus:ring-[#F5E6E8] outline-none transition-all text-sm">
+        </div>
+
+        <button type="submit" class="px-6 h-12 bg-[#D4A5A5] text-white font-medium rounded-lg hover:bg-[#C9A0A0] transition-colors shadow-sm">
+            Search
+        </button>
+    </form>
+
+    <!-- ★★★ 供應商卡片網格 (Grid Layout) with Message Button ★★★ -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {{#suppliers}}
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col md:flex-row items-center gap-6 transition-all hover:shadow-md hover:border-blue-200">
-            
-            <!-- 1. Logo / Icon (Left) -->
-            <div class="w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-2xl flex-shrink-0">
-                {{CompanyName.0}}
+        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:border-[#D4A5A5] hover:shadow-[0_8px_30px_rgb(212,165,165,0.15)] transition-all duration-300 h-full flex flex-col relative group">
+
+            <!-- Header: Icon & Rating -->
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-[#FFF5F5] flex items-center justify-center text-[#D4A5A5] shrink-0 group-hover:scale-110 transition-transform duration-300">
+                        <i data-lucide="building-2" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg leading-tight group-hover:text-[#D4A5A5] transition-colors line-clamp-1">{{CompanyName}}</h3>
+                        <span class="text-xs text-slate-400 font-mono">#{{SupplierID}}</span>
+                    </div>
+                </div>
+                <!-- Rating (Green Star as per image) -->
+                <div class="flex items-center gap-1 text-emerald-500 font-bold text-sm bg-emerald-50 px-2 py-1 rounded-lg">
+                    <i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i>
+                    {{#Rating}}{{Rating}}{{/Rating}}{{^Rating}}4.5{{/Rating}}
+                </div>
             </div>
 
-            <!-- 2. Main Info (Middle) -->
-            <div class="flex-1 w-full text-center md:text-left">
-                <div class="flex flex-col md:flex-row md:items-center gap-2 mb-2 justify-center md:justify-start">
-                    <h3 class="font-bold text-lg text-slate-800">{{CompanyName}}</h3>
-                    <div class="flex items-center gap-2 justify-center md:justify-start">
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
-                            Supplier
-                        </span>
-                        {{#MatchedMaterial}}
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
-                            Sells: {{MatchedMaterial}}
-                        </span>
-                        {{/MatchedMaterial}}
-                    </div>
-                </div>
-                
-                <div class="flex flex-wrap gap-y-1 gap-x-4 text-sm text-slate-500 justify-center md:justify-start">
-                    <div class="flex items-center gap-1">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
-                        <span class="truncate max-w-[200px]">{{#Address}}{{Address}}{{/Address}}{{^Address}}No address{{/Address}}</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <i data-lucide="phone" class="w-3.5 h-3.5 text-slate-400"></i>
-                        <span>{{#PhoneNumber}}{{PhoneNumber}}{{/PhoneNumber}}{{^PhoneNumber}}-{{/PhoneNumber}}</span>
-                    </div>
-                <div class="flex items-center gap-1">
-                    <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i>
-                    <span class="truncate max-w-[200px]">{{#Email}}{{Email}}{{/Email}}{{^Email}}-{{/Email}}</span>
-                </div>
+            <!-- Material Match Badge (if searching by material) -->
+            {{#MatchedMaterial}}
+            <div class="mb-3">
+                <span class="px-2.5 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                    <i data-lucide="check-circle" class="w-3 h-3 inline mr-1"></i>
+                    Sells: {{MatchedMaterial}}
+                </span>
             </div>
+            {{/MatchedMaterial}}
+
+            <!-- Description: 改為動態資料 -->
+            <p class="text-slate-500 text-sm mb-4 line-clamp-2 h-10">
+                {{#Description}}{{Description}}{{/Description}}{{^Description}}Professional supplier for construction materials. Quality assured products for your projects.{{/Description}}
+            </p>
+
+            <!-- Tags (Pink) -->
+            <div class="mb-6">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#FFF0F0] text-[#D4A5A5] text-xs font-medium border border-[#FFE5E5]">
+                    <i data-lucide="package" class="w-3 h-3"></i>
+                    Supplier
+                </span>
             </div>
 
-            <!-- 3. Rating & Action (Right) -->
-            <div class="flex flex-row md:flex-col items-center gap-4 md:gap-2 w-full md:w-auto border-t md:border-t-0 border-slate-100 pt-4 md:pt-0 justify-between md:justify-center pl-0 md:pl-6 md:border-l">
-                <div class="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
-                    <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-current"></i>
-                    <span class="text-amber-700 font-bold text-sm">4.5</span>
+            <!-- Contact Info (Bottom) -->
+            <div class="mt-auto space-y-2.5 pt-4 border-t border-slate-50 text-sm text-slate-500">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="phone" class="w-4 h-4 text-slate-300 shrink-0"></i>
+                    <span class="truncate">{{#PhoneNumber}}{{PhoneNumber}}{{/PhoneNumber}}{{^PhoneNumber}}-{{/PhoneNumber}}</span>
                 </div>
-                <div class="flex flex-col gap-2 w-full md:w-auto">
-                    <a href="/contractor/supplier/{{SupplierID}}" class="px-4 py-2 bg-white border border-slate-200 text-blue-600 font-medium rounded-lg hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors flex items-center gap-2 text-sm shadow-sm justify-center">
-                        <span>View Details</span>
-                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                    </a>
-                    <a href="/contractor/supplier/{{SupplierID}}/message" class="px-4 py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-2 text-sm shadow-sm justify-center">
-                        <i data-lucide="messages-square" class="w-4 h-4"></i>
-                        <span>Message</span>
-                    </a>
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="mail" class="w-4 h-4 text-slate-300 shrink-0"></i>
+                    <span class="truncate">{{#Email}}{{Email}}{{/Email}}{{^Email}}-{{/Email}}</span>
                 </div>
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-slate-300 shrink-0"></i>
+                    <span class="truncate">{{#Address}}{{Address}}{{/Address}}{{^Address}}No address{{/Address}}</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-2 mt-4 pt-4 border-t border-slate-100">
+                <a href="/contractor/supplier/{{SupplierID}}" class="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-blue-600 font-medium rounded-lg hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors flex items-center justify-center gap-2 text-sm shadow-sm">
+                    <span>View Details</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+                <a href="/contractor/supplier/{{SupplierID}}/message" class="px-4 py-2.5 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 text-sm shadow-sm" title="Message Supplier">
+                    <i data-lucide="messages-square" class="w-4 h-4"></i>
+                </a>
             </div>
 
         </div>
         {{/suppliers}}
 
         {{^suppliers}}
-        <div class="text-center py-12 bg-white rounded-xl border border-dashed border-slate-200">
-            <div class="inline-flex p-4 rounded-full bg-slate-50 text-slate-400 mb-3">
+        <div class="col-span-full py-16 text-center">
+            <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
                 <i data-lucide="search-x" class="w-8 h-8"></i>
             </div>
-            <p class="text-slate-500">No suppliers found matching your search.</p>
+            <h3 class="text-slate-900 font-medium">No suppliers found</h3>
+            <p class="text-slate-500 text-sm mt-1">Try adjusting your search criteria.</p>
         </div>
         {{/suppliers}}
     </div>
