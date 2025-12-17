@@ -43,7 +43,7 @@ graph TD
     Dashboard --> TopSuppliers("Top Rated Suppliers<br/>(Zhafran)"):::exp
 
     %% History Procurement Branch
-    TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp_missing
+    TransHistory --> OrderDetail("Order detail<br/>(Zhafran)"):::exp
     OrderDetail -.-> Invoice
 
     %% Projects Branch
@@ -91,15 +91,15 @@ graph TD
     %% 結帳流程
     Cart --> Checkout("Checkout/Confirm<br/>(Wan.Zhen.HSU)"):::exp
 
-    Checkout --> Logistics("物流 Status<br/>(Zhafran)"):::exp_missing
+    Checkout --> Logistics("物流 Status<br/>(Zhafran)"):::exp
 
-    Logistics --> Rating("Rating<br/>(Zhafran)"):::exp_missing
+    Logistics --> Rating("Rating<br/>(Zhafran)"):::exp
 
     %% 售後 (缺失)
-    Logistics --> ReturnDispute("Return/Dispute<br/>(Zhafran)"):::exp_missing
+    Logistics --> ReturnDispute("Return/Dispute<br/>(Zhafran)"):::exp
 
     %% Invoice (缺失)
-    Logistics -.-> Invoice("Invoice<br/>(Zhafran)"):::exp_missing
+    Logistics -.-> Invoice("Invoice<br/>(Zhafran)"):::exp
 
     %% 閉環回饋
     Logistics -.Status Update.-> ItemStatus
