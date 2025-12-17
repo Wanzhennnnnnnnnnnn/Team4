@@ -586,6 +586,57 @@ CREATE TABLE `ContractorSupplierMessages` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `OrderRatings`
+--
+
+DROP TABLE IF EXISTS `OrderRatings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `OrderRatings` (
+  `RatingID` INT NOT NULL AUTO_INCREMENT,
+  `POID` INT NOT NULL,
+  `ContractorID` INT NOT NULL,
+  `SupplierID` VARCHAR(50) NOT NULL,
+  `Rating` DECIMAL(2,1) NOT NULL CHECK (`Rating` >= 1 AND `Rating` <= 5),
+  `Comment` TEXT NULL,
+  `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`RatingID`),
+  UNIQUE KEY `unique_order_rating` (`POID`),
+  KEY `idx_supplier` (`SupplierID`),
+  KEY `idx_contractor` (`ContractorID`),
+  CONSTRAINT `OrderRatings_ibfk_1` FOREIGN KEY (`POID`) REFERENCES `PurchaseOrder` (`POID`) ON DELETE CASCADE,
+  CONSTRAINT `OrderRatings_ibfk_2` FOREIGN KEY (`ContractorID`) REFERENCES `Contractors` (`ContractorID`) ON DELETE CASCADE,
+  CONSTRAINT `OrderRatings_ibfk_3` FOREIGN KEY (`SupplierID`) REFERENCES `Suppliers` (`SupplierID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `OrderDisputes`
+--
+
+DROP TABLE IF EXISTS `OrderDisputes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `OrderDisputes` (
+  `DisputeID` INT NOT NULL AUTO_INCREMENT,
+  `POID` INT NOT NULL,
+  `ContractorID` INT NOT NULL,
+  `DisputeType` ENUM('Return', 'Refund', 'Damaged', 'Wrong Item', 'Not Received', 'Other') NOT NULL,
+  `Description` TEXT NOT NULL,
+  `Status` ENUM('Open', 'Under Review', 'Resolved', 'Rejected') DEFAULT 'Open',
+  `Resolution` TEXT NULL,
+  `CreatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `UpdatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`DisputeID`),
+  KEY `idx_poid` (`POID`),
+  KEY `idx_contractor` (`ContractorID`),
+  KEY `idx_status` (`Status`),
+  CONSTRAINT `OrderDisputes_ibfk_1` FOREIGN KEY (`POID`) REFERENCES `PurchaseOrder` (`POID`) ON DELETE CASCADE,
+  CONSTRAINT `OrderDisputes_ibfk_2` FOREIGN KEY (`ContractorID`) REFERENCES `Contractors` (`ContractorID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping routines for database 'assignment_db'
 --
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

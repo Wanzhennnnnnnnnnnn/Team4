@@ -1248,4 +1248,251 @@ router.post('/wishlist/material/:materialId/toggle', async (req, res) => {
     }
 });
 
+// ==========================================
+// 15. Order Detail (with Invoice, Rating, Dispute)
+// ==========================================
+router.get('/orders/:id', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const poId = req.params.id;
+
+        // Get order details with contractor and supplier info
+        const [orders] = await pool.execute(
+            `SELECT PO.*,
+                    C.Name as ContractorName, C.Email as ContractorEmail,
+                    C.PhoneNumber as ContractorPhone, C.Address as ContractorAddress,
+                    S.SupplierName, S.Email as SupplierEmail,
+                    S.PhoneNumber as SupplierPhone, S.Address as SupplierAddress,
+                    P.ProjectName, P.Location as ProjectLocation
+             FROM PurchaseOrder PO
+             JOIN Contractors C ON PO.ContractorID = C.ContractorID
+             JOIN Suppliers S ON PO.SupplierID = S.SupplierID
+             JOIN Projects P ON PO.ProjectID = P.ProjectID
+             WHERE PO.POID = ? AND PO.ContractorID = ?`,
+            [poId, contractorId]
+        );
+
+        if (orders.length === 0) {
+            return res.redirect('/contractor/orders');
+        }
+
+        const order = orders[0];
+
+        // Get order items
+        const [items] = await pool.execute(
+            `SELECT POI.*, M.MaterialName, U.UnitName
+             FROM POItems POI
+             JOIN Materials M ON POI.MaterialID = M.MaterialID
+             LEFT JOIN Units U ON M.UnitID = U.UnitID
+             WHERE POI.POID = ?`,
+            [poId]
+        );
+
+        const formattedItems = items.map(item => ({
+            ...item,
+            Subtotal: (item.Quantity * item.UnitPrice).toLocaleString(),
+            UnitPrice: item.UnitPrice.toLocaleString()
+        }));
+
+        // Get rating if exists
+        let rating = null;
+        let ratingStars = [];
+        try {
+            const [ratings] = await pool.execute(
+                'SELECT * FROM OrderRatings WHERE POID = ?',
+                [poId]
+            );
+            if (ratings.length > 0) {
+                rating = ratings[0];
+                rating.FormattedDate = new Date(rating.CreatedAt).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                });
+                // Generate stars array
+                for (let i = 1; i <= 5; i++) {
+                    ratingStars.push({ filled: i <= Math.round(rating.Rating) });
+                }
+            }
+        } catch (e) { /* Table might not exist yet */ }
+
+        // Get disputes if any
+        let disputes = [];
+        try {
+            const [disputeRows] = await pool.execute(
+                'SELECT * FROM OrderDisputes WHERE POID = ? ORDER BY CreatedAt DESC',
+                [poId]
+            );
+            disputes = disputeRows.map(d => ({
+                ...d,
+                FormattedDate: new Date(d.CreatedAt).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                }),
+                isOpen: d.Status === 'Open',
+                isUnderReview: d.Status === 'Under Review',
+                isResolved: d.Status === 'Resolved',
+                isRejected: d.Status === 'Rejected'
+            }));
+        } catch (e) { /* Table might not exist yet */ }
+
+        const orderDate = new Date(order.OrderDate);
+        const estimatedArrival = order.EstimatedArrival ? new Date(order.EstimatedArrival) : new Date(orderDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        const getStatusColor = (status) => {
+            const colors = {
+                'Pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                'Processing': 'bg-blue-100 text-blue-800 border-blue-200',
+                'Shipped': 'bg-purple-100 text-purple-800 border-purple-200',
+                'Delivered': 'bg-green-100 text-green-800 border-green-200',
+                'Cancelled': 'bg-red-100 text-red-800 border-red-200'
+            };
+            return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+        };
+
+        await renderWithLayout(req, res, 'order_detail', {
+            title: `Order #PO-${poId}`,
+            order: {
+                ...order,
+                FormattedDate: orderDate.toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                }),
+                FormattedTotal: order.TotalAmount ? parseFloat(order.TotalAmount).toLocaleString() : '0',
+                FormattedArrival: estimatedArrival.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                StatusColor: getStatusColor(order.Status),
+                IsPending: order.Status === 'Pending',
+                IsProcessing: order.Status === 'Processing',
+                IsShipped: order.Status === 'Shipped',
+                IsDelivered: order.Status === 'Delivered',
+                ProgressWidth: {
+                    'Pending': '12%',
+                    'Processing': '37%',
+                    'Shipped': '62%',
+                    'Delivered': '100%'
+                }[order.Status] || '0%'
+            },
+            items: formattedItems,
+            itemCount: items.length,
+            rating,
+            ratingStars,
+            hasRating: rating !== null,
+            disputes,
+            isOrders: true
+        });
+
+    } catch (err) {
+        console.error('Order detail error:', err);
+        res.redirect('/contractor/orders');
+    }
+});
+
+// ==========================================
+// 16. Rate Order
+// ==========================================
+router.post('/orders/:id/rate', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const poId = req.params.id;
+        const { rating, comment } = req.body;
+
+        // Verify order belongs to contractor and is delivered
+        const [orders] = await pool.execute(
+            'SELECT SupplierID, Status FROM PurchaseOrder WHERE POID = ? AND ContractorID = ?',
+            [poId, contractorId]
+        );
+
+        if (orders.length === 0) {
+            return res.redirect('/contractor/orders');
+        }
+
+        const order = orders[0];
+        const orderIsDelivered = order.Status === 'Delivered';
+
+        if (!orderIsDelivered) {
+            return res.redirect(`/contractor/orders/${poId}?error=not_delivered`);
+        }
+
+        // Check if already rated
+        const [existingRating] = await pool.execute(
+            'SELECT 1 FROM OrderRatings WHERE POID = ?',
+            [poId]
+        );
+
+        if (existingRating.length > 0) {
+            return res.redirect(`/contractor/orders/${poId}?error=already_rated`);
+        }
+
+        // Insert rating
+        await pool.execute(
+            'INSERT INTO OrderRatings (POID, ContractorID, SupplierID, Rating, Comment) VALUES (?, ?, ?, ?, ?)',
+            [poId, contractorId, order.SupplierID, parseFloat(rating), comment || null]
+        );
+
+        // Update supplier's average rating
+        const [avgResult] = await pool.execute(
+            'SELECT AVG(Rating) as AvgRating FROM OrderRatings WHERE SupplierID = ?',
+            [order.SupplierID]
+        );
+
+        if (avgResult.length > 0 && avgResult[0].AvgRating) {
+            await pool.execute(
+                'UPDATE Suppliers SET Rating = ? WHERE SupplierID = ?',
+                [avgResult[0].AvgRating, order.SupplierID]
+            );
+        }
+
+        // Create notification
+        try {
+            await pool.execute(
+                'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                [contractorId, 'Rating Submitted', `Thank you for rating order #PO-${poId}!`, `/contractor/orders/${poId}`]
+            );
+        } catch (e) { }
+
+        res.redirect(`/contractor/orders/${poId}?success=rated`);
+
+    } catch (err) {
+        console.error('Rating error:', err);
+        res.redirect(`/contractor/orders/${req.params.id}?error=rating_failed`);
+    }
+});
+
+// ==========================================
+// 17. File Dispute
+// ==========================================
+router.post('/orders/:id/dispute', async (req, res) => {
+    try {
+        const contractorId = req.signedCookies.userId;
+        const poId = req.params.id;
+        const { disputeType, description } = req.body;
+
+        // Verify order belongs to contractor
+        const [orders] = await pool.execute(
+            'SELECT 1 FROM PurchaseOrder WHERE POID = ? AND ContractorID = ?',
+            [poId, contractorId]
+        );
+
+        if (orders.length === 0) {
+            return res.redirect('/contractor/orders');
+        }
+
+        // Insert dispute
+        await pool.execute(
+            'INSERT INTO OrderDisputes (POID, ContractorID, DisputeType, Description) VALUES (?, ?, ?, ?)',
+            [poId, contractorId, disputeType, description]
+        );
+
+        // Create notification
+        try {
+            await pool.execute(
+                'INSERT INTO Notifications (ContractorID, Title, Message, Link) VALUES (?, ?, ?, ?)',
+                [contractorId, 'Dispute Filed', `Your dispute for order #PO-${poId} has been submitted.`, `/contractor/orders/${poId}`]
+            );
+        } catch (e) { }
+
+        res.redirect(`/contractor/orders/${poId}?success=dispute_filed`);
+
+    } catch (err) {
+        console.error('Dispute error:', err);
+        res.redirect(`/contractor/orders/${req.params.id}?error=dispute_failed`);
+    }
+});
+
 module.exports = router;

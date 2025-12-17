@@ -1,0 +1,511 @@
+<div class="space-y-6 max-w-5xl mx-auto">
+
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+            <div class="flex items-center gap-3">
+                <a href="/contractor/orders" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </a>
+                <h2 class="text-2xl font-bold text-slate-800">Order #PO-{{order.POID}}</h2>
+                <span class="px-3 py-1 rounded-full text-xs font-bold border {{order.StatusColor}}">
+                    {{order.Status}}
+                </span>
+            </div>
+            <p class="text-slate-500 text-sm mt-1 ml-8">Placed on {{order.FormattedDate}}</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            {{#order.IsDelivered}}
+            {{^hasRating}}
+            <button onclick="openRatingModal()" class="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-bold hover:bg-yellow-600 transition-colors shadow-sm">
+                <i data-lucide="star" class="w-4 h-4"></i>
+                Rate Order
+            </button>
+            {{/hasRating}}
+            {{/order.IsDelivered}}
+
+            <button onclick="openDisputeModal()" class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-bold hover:bg-red-100 transition-colors">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                File Dispute
+            </button>
+
+            <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-200 transition-colors">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                Print Invoice
+            </button>
+        </div>
+    </div>
+
+    <!-- Logistics Status Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-100">
+            <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="truck" class="w-5 h-5 text-[#D4A5A5]"></i>
+                Shipment Status
+            </h3>
+        </div>
+        <div class="p-6">
+            <!-- Progress Bar -->
+            <div class="relative px-2 mb-6">
+                <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full z-0"></div>
+                <div class="absolute top-1/2 left-0 h-1 bg-green-500 -translate-y-1/2 rounded-full z-0 transition-all duration-700 ease-out"
+                     style="width: {{order.ProgressWidth}}"></div>
+
+                <div class="relative z-10 flex justify-between w-full">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-green-500 border-green-500 text-white shadow-sm">
+                            <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold text-green-600">Ordered</span>
+                        <span class="text-[10px] text-slate-400">{{order.FormattedDate}}</span>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2
+                            {{#order.IsProcessing}}bg-green-500 border-green-500 text-white{{/order.IsProcessing}}
+                            {{#order.IsShipped}}bg-green-500 border-green-500 text-white{{/order.IsShipped}}
+                            {{#order.IsDelivered}}bg-green-500 border-green-500 text-white{{/order.IsDelivered}}
+                            {{#order.IsPending}}bg-white border-slate-200 text-slate-300{{/order.IsPending}}
+                            shadow-sm">
+                            <i data-lucide="package" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold {{#order.IsProcessing}}text-green-600{{/order.IsProcessing}} {{#order.IsShipped}}text-green-600{{/order.IsShipped}} {{#order.IsDelivered}}text-green-600{{/order.IsDelivered}} {{#order.IsPending}}text-slate-400{{/order.IsPending}}">Processing</span>
+                    </div>
+
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2
+                            {{#order.IsShipped}}bg-green-500 border-green-500 text-white{{/order.IsShipped}}
+                            {{#order.IsDelivered}}bg-green-500 border-green-500 text-white{{/order.IsDelivered}}
+                            {{^order.IsShipped}}{{^order.IsDelivered}}bg-white border-slate-200 text-slate-300{{/order.IsDelivered}}{{/order.IsShipped}}
+                            shadow-sm">
+                            <i data-lucide="truck" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold {{#order.IsShipped}}text-green-600{{/order.IsShipped}} {{#order.IsDelivered}}text-green-600{{/order.IsDelivered}} {{^order.IsShipped}}{{^order.IsDelivered}}text-slate-400{{/order.IsDelivered}}{{/order.IsShipped}}">Shipped</span>
+                        {{#order.TrackingNumber}}
+                        <span class="text-[10px] text-blue-600 font-mono">{{order.TrackingNumber}}</span>
+                        {{/order.TrackingNumber}}
+                    </div>
+
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center border-2
+                            {{#order.IsDelivered}}bg-green-500 border-green-500 text-white{{/order.IsDelivered}}
+                            {{^order.IsDelivered}}bg-white border-slate-200 text-slate-300{{/order.IsDelivered}}
+                            shadow-sm">
+                            <i data-lucide="check" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-bold {{#order.IsDelivered}}text-green-600{{/order.IsDelivered}} {{^order.IsDelivered}}text-slate-400{{/order.IsDelivered}}">Delivered</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-6 text-sm">
+                <div>
+                    <span class="text-slate-500">Est. Arrival:</span>
+                    <span class="font-semibold ml-1 {{#order.IsDelivered}}text-green-600{{/order.IsDelivered}}">{{order.FormattedArrival}}</span>
+                </div>
+                {{#order.TrackingNumber}}
+                <div class="flex items-center gap-1 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-blue-600"></i>
+                    <span class="text-blue-600">Tracking: <span class="font-mono font-semibold">{{order.TrackingNumber}}</span></span>
+                </div>
+                {{/order.TrackingNumber}}
+            </div>
+
+            {{^order.IsDelivered}}
+            <form action="/contractor/orders/{{order.POID}}/simulate-status" method="POST" class="mt-4">
+                <button type="submit" class="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-colors border border-indigo-100">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    Simulate Next Step (Demo)
+                </button>
+            </form>
+            {{/order.IsDelivered}}
+        </div>
+    </div>
+
+    <!-- Rating Display (if exists) -->
+    {{#rating}}
+    <div class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200 p-6">
+        <div class="flex items-start gap-4">
+            <div class="bg-yellow-100 p-3 rounded-full">
+                <i data-lucide="star" class="w-6 h-6 text-yellow-600"></i>
+            </div>
+            <div class="flex-1">
+                <h4 class="font-bold text-slate-800 mb-2">Your Rating</h4>
+                <div class="flex items-center gap-1 mb-2">
+                    {{#ratingStars}}
+                    <i data-lucide="star" class="w-5 h-5 {{#filled}}text-yellow-500 fill-yellow-500{{/filled}} {{^filled}}text-slate-300{{/filled}}"></i>
+                    {{/ratingStars}}
+                    <span class="ml-2 font-semibold text-slate-700">{{rating.Rating}}/5</span>
+                </div>
+                {{#rating.Comment}}
+                <p class="text-slate-600 text-sm italic">"{{rating.Comment}}"</p>
+                {{/rating.Comment}}
+                <p class="text-xs text-slate-400 mt-2">Rated on {{rating.FormattedDate}}</p>
+            </div>
+        </div>
+    </div>
+    {{/rating}}
+
+    <!-- Disputes (if any) -->
+    {{#disputes.length}}
+    <div class="bg-red-50 rounded-xl border border-red-200 p-6">
+        <h4 class="font-bold text-red-800 mb-4 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+            Active Disputes
+        </h4>
+        <div class="space-y-3">
+            {{#disputes}}
+            <div class="bg-white rounded-lg border border-red-100 p-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <span class="inline-block px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded mb-2">{{DisputeType}}</span>
+                        <p class="text-sm text-slate-700">{{Description}}</p>
+                        <p class="text-xs text-slate-400 mt-2">Filed on {{FormattedDate}}</p>
+                    </div>
+                    <span class="px-2 py-1 text-xs font-bold rounded border
+                        {{#isOpen}}bg-orange-50 text-orange-600 border-orange-200{{/isOpen}}
+                        {{#isUnderReview}}bg-blue-50 text-blue-600 border-blue-200{{/isUnderReview}}
+                        {{#isResolved}}bg-green-50 text-green-600 border-green-200{{/isResolved}}
+                        {{#isRejected}}bg-slate-50 text-slate-600 border-slate-200{{/isRejected}}
+                    ">{{Status}}</span>
+                </div>
+                {{#Resolution}}
+                <div class="mt-3 pt-3 border-t border-red-100">
+                    <p class="text-xs text-slate-500">Resolution: <span class="text-slate-700">{{Resolution}}</span></p>
+                </div>
+                {{/Resolution}}
+            </div>
+            {{/disputes}}
+        </div>
+    </div>
+    {{/disputes.length}}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Order Info -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Invoice Section -->
+            <div id="invoice-section" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-2">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="file-text" class="w-5 h-5 text-[#D4A5A5]"></i>
+                        Invoice
+                    </h3>
+                    <span class="text-sm text-slate-500 font-mono">#INV-{{order.POID}}</span>
+                </div>
+
+                <div class="p-6">
+                    <!-- Invoice Header -->
+                    <div class="flex justify-between mb-8 pb-6 border-b border-slate-100">
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-800">BuildLink</h4>
+                            <p class="text-sm text-slate-500">Construction Materials Marketplace</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-2xl font-bold text-slate-800">INVOICE</p>
+                            <p class="text-sm text-slate-500">Date: {{order.FormattedDate}}</p>
+                        </div>
+                    </div>
+
+                    <!-- Bill To / Ship To -->
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h5>
+                            <p class="font-semibold text-slate-800">{{order.ContractorName}}</p>
+                            <p class="text-sm text-slate-600">{{order.ContractorEmail}}</p>
+                            <p class="text-sm text-slate-600">{{order.ContractorPhone}}</p>
+                            <p class="text-sm text-slate-600">{{order.ContractorAddress}}</p>
+                        </div>
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Supplier</h5>
+                            <p class="font-semibold text-slate-800">{{order.SupplierName}}</p>
+                            <p class="text-sm text-slate-600">{{order.SupplierEmail}}</p>
+                            <p class="text-sm text-slate-600">{{order.SupplierPhone}}</p>
+                            <p class="text-sm text-slate-600">{{order.SupplierAddress}}</p>
+                        </div>
+                    </div>
+
+                    <!-- Order Details -->
+                    <div class="mb-6">
+                        <h5 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Project</h5>
+                        <p class="font-semibold text-slate-800">{{order.ProjectName}}</p>
+                        <p class="text-sm text-slate-600">{{order.ProjectLocation}}</p>
+                    </div>
+
+                    <!-- Items Table -->
+                    <table class="w-full mb-6">
+                        <thead>
+                            <tr class="border-b-2 border-slate-200">
+                                <th class="text-left py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Item</th>
+                                <th class="text-center py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Unit</th>
+                                <th class="text-center py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Qty</th>
+                                <th class="text-right py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Unit Price</th>
+                                <th class="text-right py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#items}}
+                            <tr class="border-b border-slate-100">
+                                <td class="py-3">
+                                    <p class="font-medium text-slate-800">{{MaterialName}}</p>
+                                </td>
+                                <td class="py-3 text-center text-sm text-slate-600">{{UnitName}}</td>
+                                <td class="py-3 text-center text-sm text-slate-600">{{Quantity}}</td>
+                                <td class="py-3 text-right text-sm text-slate-600">NT$ {{UnitPrice}}</td>
+                                <td class="py-3 text-right font-semibold text-slate-800">NT$ {{Subtotal}}</td>
+                            </tr>
+                            {{/items}}
+                        </tbody>
+                    </table>
+
+                    <!-- Totals -->
+                    <div class="border-t-2 border-slate-200 pt-4">
+                        <div class="flex justify-end">
+                            <div class="w-64 space-y-2">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-500">Subtotal</span>
+                                    <span class="text-slate-700">NT$ {{order.FormattedTotal}}</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-500">Shipping</span>
+                                    <span class="text-slate-700">Included</span>
+                                </div>
+                                <div class="flex justify-between text-lg font-bold border-t border-slate-200 pt-2 mt-2">
+                                    <span class="text-slate-800">Total</span>
+                                    <span class="text-[#D4A5A5]">NT$ {{order.FormattedTotal}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-8 pt-6 border-t border-slate-100 text-center text-sm text-slate-400">
+                        <p>Thank you for your business!</p>
+                        <p class="mt-1">BuildLink - Construction Materials Marketplace</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Order Summary -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800">Order Summary</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-500">Order ID</span>
+                        <span class="font-mono font-semibold text-slate-800">#PO-{{order.POID}}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-500">Order Date</span>
+                        <span class="text-slate-700">{{order.FormattedDate}}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-500">Status</span>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold border {{order.StatusColor}}">{{order.Status}}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-500">Items</span>
+                        <span class="text-slate-700">{{itemCount}} items</span>
+                    </div>
+                    <div class="border-t border-slate-100 pt-4 flex justify-between">
+                        <span class="font-semibold text-slate-800">Total</span>
+                        <span class="font-bold text-lg text-[#D4A5A5]">NT$ {{order.FormattedTotal}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplier Info -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800">Supplier</h3>
+                </div>
+                <div class="p-6">
+                    <p class="font-semibold text-slate-800">{{order.SupplierName}}</p>
+                    <p class="text-sm text-slate-600 mt-1">{{order.SupplierEmail}}</p>
+                    <p class="text-sm text-slate-600">{{order.SupplierPhone}}</p>
+                    <a href="/contractor/supplier/{{order.SupplierID}}/message"
+                       class="mt-4 flex items-center justify-center gap-2 w-full px-4 py-2 bg-[#D4A5A5] text-white rounded-lg text-sm font-bold hover:bg-[#C9A0A0] transition-colors">
+                        <i data-lucide="message-circle" class="w-4 h-4"></i>
+                        Contact Supplier
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50/80 px-6 py-4 border-b border-slate-100">
+                    <h3 class="font-bold text-slate-800">Quick Actions</h3>
+                </div>
+                <div class="p-4 space-y-2">
+                    <a href="/contractor/supplier/{{order.SupplierID}}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors text-sm text-slate-700">
+                        <i data-lucide="shopping-bag" class="w-4 h-4 text-slate-400"></i>
+                        Order Again
+                    </a>
+                    <a href="/contractor/projects/{{order.ProjectID}}"
+                       class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors text-sm text-slate-700">
+                        <i data-lucide="folder" class="w-4 h-4 text-slate-400"></i>
+                        View Project
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rating Modal -->
+<div id="ratingModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-yellow-50 to-amber-50 px-6 py-4 border-b border-yellow-100">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>
+                Rate Your Order
+            </h3>
+        </div>
+        <form action="/contractor/orders/{{order.POID}}/rate" method="POST" class="p-6">
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-700 mb-3">How was your experience?</label>
+                <div class="flex justify-center gap-2" id="starRating">
+                    <button type="button" onclick="setRating(1)" class="star-btn p-2 hover:scale-110 transition-transform">
+                        <i data-lucide="star" class="w-8 h-8 text-slate-300" id="star-1"></i>
+                    </button>
+                    <button type="button" onclick="setRating(2)" class="star-btn p-2 hover:scale-110 transition-transform">
+                        <i data-lucide="star" class="w-8 h-8 text-slate-300" id="star-2"></i>
+                    </button>
+                    <button type="button" onclick="setRating(3)" class="star-btn p-2 hover:scale-110 transition-transform">
+                        <i data-lucide="star" class="w-8 h-8 text-slate-300" id="star-3"></i>
+                    </button>
+                    <button type="button" onclick="setRating(4)" class="star-btn p-2 hover:scale-110 transition-transform">
+                        <i data-lucide="star" class="w-8 h-8 text-slate-300" id="star-4"></i>
+                    </button>
+                    <button type="button" onclick="setRating(5)" class="star-btn p-2 hover:scale-110 transition-transform">
+                        <i data-lucide="star" class="w-8 h-8 text-slate-300" id="star-5"></i>
+                    </button>
+                </div>
+                <input type="hidden" name="rating" id="ratingValue" value="5" required>
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Comment (optional)</label>
+                <textarea name="comment" rows="3"
+                    class="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-yellow-400 resize-none"
+                    placeholder="Share your experience with this order..."></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="closeRatingModal()"
+                    class="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="flex-1 px-4 py-3 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors">
+                    Submit Rating
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Dispute Modal -->
+<div id="disputeModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="bg-gradient-to-r from-red-50 to-orange-50 px-6 py-4 border-b border-red-100">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
+                File a Dispute
+            </h3>
+        </div>
+        <form action="/contractor/orders/{{order.POID}}/dispute" method="POST" class="p-6">
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Dispute Type</label>
+                <select name="disputeType" required
+                    class="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-red-400 bg-white">
+                    <option value="">Select a reason...</option>
+                    <option value="Return">Return Request</option>
+                    <option value="Refund">Refund Request</option>
+                    <option value="Damaged">Damaged Items</option>
+                    <option value="Wrong Item">Wrong Item Received</option>
+                    <option value="Not Received">Order Not Received</option>
+                    <option value="Other">Other Issue</option>
+                </select>
+            </div>
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+                <textarea name="description" rows="4" required
+                    class="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-red-400 resize-none"
+                    placeholder="Please describe your issue in detail..."></textarea>
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="closeDisputeModal()"
+                    class="flex-1 px-4 py-3 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors">
+                    Submit Dispute
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #invoice-section, #invoice-section * {
+            visibility: visible;
+        }
+        #invoice-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    function openRatingModal() {
+        document.getElementById('ratingModal').classList.remove('hidden');
+        setRating(5);
+    }
+
+    function closeRatingModal() {
+        document.getElementById('ratingModal').classList.add('hidden');
+    }
+
+    function openDisputeModal() {
+        document.getElementById('disputeModal').classList.remove('hidden');
+    }
+
+    function closeDisputeModal() {
+        document.getElementById('disputeModal').classList.add('hidden');
+    }
+
+    function setRating(value) {
+        document.getElementById('ratingValue').value = value;
+        for (let i = 1; i <= 5; i++) {
+            const star = document.getElementById('star-' + i);
+            if (i <= value) {
+                star.classList.remove('text-slate-300');
+                star.classList.add('text-yellow-500', 'fill-yellow-500');
+            } else {
+                star.classList.add('text-slate-300');
+                star.classList.remove('text-yellow-500', 'fill-yellow-500');
+            }
+        }
+        lucide.createIcons();
+    }
+
+    // Close modals on outside click
+    document.getElementById('ratingModal').addEventListener('click', function(e) {
+        if (e.target === this) closeRatingModal();
+    });
+    document.getElementById('disputeModal').addEventListener('click', function(e) {
+        if (e.target === this) closeDisputeModal();
+    });
+</script>

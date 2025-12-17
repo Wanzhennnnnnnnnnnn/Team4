@@ -57,7 +57,7 @@
                     </div>
                     <div>
                         <p class="text-xs text-slate-500 uppercase font-bold tracking-wider">Order ID</p>
-                        <p class="font-mono text-slate-600">#PO-{{POID}}</p>
+                        <a href="/contractor/orders/{{POID}}" class="font-mono text-blue-600 hover:underline">#PO-{{POID}}</a>
                     </div>
                 </div>
 
@@ -131,7 +131,7 @@
                         </div>
 
                         <div class="flex flex-col items-center gap-2">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center border-2
                                 {{#IsDelivered}}bg-green-500 border-green-500 text-white{{/IsDelivered}}
                                 {{^IsDelivered}}bg-white border-slate-200 text-slate-300{{/IsDelivered}}
                                 transition-colors shadow-sm">
@@ -140,6 +140,20 @@
                             <span class="text-xs font-bold {{#IsDelivered}}text-green-600{{/IsDelivered}} text-slate-400">Delivered</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+                    <a href="/contractor/orders/{{POID}}" class="flex items-center gap-2 px-4 py-2 bg-[#D4A5A5] text-white rounded-lg text-sm font-bold hover:bg-[#C9A0A0] transition-colors">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        View Details & Invoice
+                    </a>
+                    {{#IsDelivered}}
+                    <a href="/contractor/orders/{{POID}}#rating" class="flex items-center gap-2 px-4 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-sm font-bold hover:bg-yellow-100 transition-colors">
+                        <i data-lucide="star" class="w-4 h-4"></i>
+                        Rate Order
+                    </a>
+                    {{/IsDelivered}}
                 </div>
             </div>
         </div>
