@@ -12,7 +12,7 @@ services:
       - mysql_data_buildlink_007:/var/lib/mysql
       - ./BuildLink/DB清理/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
-      - "3306:3306"
+      - "3310:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
       interval: 10s
@@ -35,7 +35,7 @@ services:
       DB_NAME: assignment_db
       NODE_ENV: development
     ports:
-      - "8080:80"
+      - "20254:80"
     depends_on:
       mysql:
         condition: service_healthy
